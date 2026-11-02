@@ -1,0 +1,2467 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>羊了个羊网页游戏</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#9ed08a; --bg2:#cdeeb4; --ink:#2e3a24; --muted:#5c6b50;
+    --card:#fffdf4; --card2:#f4f9e8; --wood:#a9743f; --wood-dark:#7c4f26;
+    --green:#3f9e4d; --green-dark:#2c7a38; --accent:#ff9f1c; --red:#e5484d;
+    --tile:#fffef8; --tile-border:#e6ddc4; --slot-bg:#5d3d1e; --slot-inset:#3f2a12;
+    --shadow:0 10px 30px rgba(46,80,30,.22);
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#16240f; --bg2:#22381a; --ink:#eef5e4; --muted:#a9bc98;
+      --card:#24351d; --card2:#2c4023; --wood:#8a5a2e; --wood-dark:#5e3d1c;
+      --tile:#fdf8ea; --tile-border:#cbbf9c; --slot-bg:#4a3016; --slot-inset:#2e1d0a;
+      --shadow:0 10px 30px rgba(0,0,0,.45);
+    }
+  }
+  *{box-sizing:border-box}
+  /* 禁止双击缩放：manipulation 只关双击放大，不影响滑动和点按 */
+  html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+  html,body{margin:0;padding:0}
+  button,.tile,.prop,.icon-btn,.level-btn,.slotbar,.board-frame{touch-action:manipulation}
+  .tile,.prop,button{-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(220px 60px at 12% 8%, rgba(255,255,255,.55), transparent 70%),
+      radial-gradient(280px 70px at 82% 4%, rgba(255,255,255,.45), transparent 70%),
+      linear-gradient(180deg,var(--bg2),var(--bg) 55%,#7fb96a);
+    min-height:100vh;
+  }
+  @media (prefers-color-scheme: dark){
+    body{background:linear-gradient(180deg,#1b2c14,#16240f 60%,#101c0b)}
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:10px 12px 30px}
+  /* ---- top bar ---- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:4px 8px;flex-wrap:wrap;
+    background:var(--card);border:2px solid rgba(255,255,255,.7);border-radius:14px;
+    padding:4px 8px;box-shadow:var(--shadow);
+  }
+  .levels{display:flex;gap:6px}
+  .level-btn{
+    border:2px solid #d8e6c4;background:var(--card2);color:var(--ink);
+    font-family:"ZCOOL KuaiLe",sans-serif;font-size:13px;padding:4px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;
+  }
+  .level-btn.active{background:var(--green);border-color:var(--green-dark);color:#fff}
+  .stats{display:flex;gap:8px;align-items:center;font-weight:700;font-size:12px;white-space:nowrap}
+  .stats b{font-size:14px}
+  .icon-btn{
+    border:2px solid #d8e6c4;background:var(--card2);color:var(--ink);border-radius:999px;
+    width:30px;height:30px;font-size:14px;cursor:pointer;line-height:1;flex:none;
+  }
+  .icon-btn:hover{border-color:var(--green)}
+  /* ---- status ---- */
+  .status{display:flex;gap:6px;margin:6px 2px 0;flex-wrap:nowrap}
+  .chip{
+    flex:1;min-width:0;background:rgba(255,255,255,.72);border-radius:10px;padding:4px 6px;
+    text-align:center;font-size:11px;color:var(--muted);font-weight:500;
+    display:flex;align-items:baseline;justify-content:center;gap:5px;white-space:nowrap;
+  }
+  @media (prefers-color-scheme: dark){.chip{background:rgba(0,0,0,.28)}}
+  .chip b{display:inline;font-size:14px;color:var(--ink);line-height:1.25}
+  .progress{height:6px;background:rgba(0,0,0,.14);border-radius:999px;overflow:hidden;margin-top:6px}
+  .progress i{display:block;height:100%;background:linear-gradient(90deg,#57b25e,#ff9f1c);width:0%;transition:width .35s ease}
+  .progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px;font-weight:500}
+  /* ---- board ---- */
+  .board-frame{
+    margin-top:6px;background:linear-gradient(180deg,#c08a4e,#a9743f);
+    border-radius:18px;padding:6px 4px 8px;box-shadow:var(--shadow);position:relative;
+  }
+  .board-frame::before{
+    content:"";position:absolute;inset:6px;border:2px dashed rgba(255,255,255,.35);border-radius:16px;pointer-events:none;
+  }
+  .board-wrap{position:relative;overflow:hidden}
+  .board-inner{position:relative;margin:0 auto;transform-origin:top center}
+  .tile{
+    position:absolute;width:58px;height:58px;border-radius:12px;border:2px solid var(--tile-border);
+    background:var(--tile);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 0 rgba(0,0,0,.14),0 6px 12px rgba(0,0,0,.16);
+    transition:transform .15s ease, filter .2s ease, opacity .2s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .tile img.face{width:100%;height:100%;object-fit:cover;display:block;border-radius:10px;pointer-events:none}
+  .tile .dot{position:absolute;right:5px;bottom:4px;width:7px;height:7px;border-radius:50%;pointer-events:none}
+  .tile:not(.covered):hover{transform:translateY(-3px) scale(1.04)}
+  .tile:not(.covered):active{transform:translateY(0) scale(.97)}
+  .tile.covered{filter:brightness(.58) saturate(.75);cursor:not-allowed;box-shadow:0 2px 0 rgba(0,0,0,.18)}
+  /* 透视道具：被压住的牌短暂变亮，能看清下面的表情 */
+  .board-inner.peeking .tile.covered{filter:brightness(.93) saturate(1.05);box-shadow:0 0 0 2px rgba(255,159,28,.55),0 4px 0 rgba(0,0,0,.14)}
+  .board-inner.hammer-mode .tile:not(.covered){outline:3px solid var(--accent);outline-offset:-3px;cursor:pointer}
+  .tile.removed{opacity:0;pointer-events:none;transform:scale(.6)}
+  .tile.hint-pulse{animation:pulse 1s ease infinite;outline:3px solid var(--accent);z-index:60 !important}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12) translateY(-4px)}}
+  .tile.shake{animation:shake .3s ease}
+  @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+  /* tint per type */
+  .tile.t-sheep{background:#fff8e8}.tile.t-carrot{background:#fff0df}.tile.t-grass{background:#eaf7df}
+  .tile.t-bell{background:#fff9d6}.tile.t-bucket{background:#e6f2ff}.tile.t-yarn{background:#fdeef4}
+  .tile.t-milk{background:#eef7ff}.tile.t-apple{background:#ffecec}.tile.t-tree{background:#e6f3e2}
+  .tile.t-scissors{background:#eceeff}
+  /* ---- slot bar ---- */
+  .slot-label{display:flex;justify-content:space-between;align-items:baseline;margin:6px 2px 3px;font-weight:700;font-size:11px}
+  .slot-label span{font-size:11px;color:var(--muted);font-weight:500}
+  .slotbar{
+    background:linear-gradient(180deg,#6b4423,#553417);border-radius:14px;padding:6px 8px;
+    box-shadow:var(--shadow);position:relative;
+  }
+  .slots{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;max-width:320px;margin:0 auto;width:100%}
+  .slot{
+    aspect-ratio:1;border-radius:10px;background:var(--slot-inset);
+    box-shadow:inset 0 3px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:visible;
+  }
+  .slot .mini{
+    width:100%;height:100%;border-radius:11px;display:flex;align-items:center;justify-content:center;
+    background:var(--tile);border:2px solid var(--tile-border);overflow:hidden;
+    animation:drop .22s ease;box-shadow:0 3px 0 rgba(0,0,0,.2);padding:0;
+  }
+  .slot .mini img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+  @keyframes drop{from{transform:translateY(-14px) scale(.7);opacity:.4}to{transform:none;opacity:1}}
+  .slot .mini.pop{animation:popout .25s ease forwards}
+  @keyframes popout{to{transform:scale(1.35);opacity:0}}
+  .slotbar.full{animation:shake .3s ease}
+  .hold-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .hold-label{font-size:11px;color:#e8d3ae;margin:0;font-weight:500;white-space:nowrap}
+  .hold{display:grid;grid-template-columns:repeat(3,32px);gap:5px}
+  .hold .slot{background:rgba(0,0,0,.28);border:1px dashed rgba(255,255,255,.35);border-radius:8px}
+  .hold .mini{cursor:pointer;font-size:24px}
+  /* 结算遮罩打开时，顶栏不可点：防止结算按钮的连点/点透落到关卡按钮上 */
+  body.overlay-open .topbar{pointer-events:none}
+  .hold-empty{font-size:12px;color:#d9c39a;align-self:center}
+  .float-score{
+    position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-family:"ZCOOL KuaiLe",sans-serif;
+    font-size:24px;color:var(--accent);text-shadow:0 2px 0 #fff,0 3px 8px rgba(0,0,0,.25);
+    animation:floatup .9s ease forwards;pointer-events:none;z-index:5;white-space:nowrap;
+  }
+  @keyframes floatup{from{opacity:0;transform:translate(-50%,8px)}30%{opacity:1}to{opacity:0;transform:translate(-50%,-26px)}}
+  /* ---- props（紧凑矮按钮：只留图标+名称，角标保留） ---- */
+  .props{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:8px}
+  .prop{
+    border:2px solid rgba(255,255,255,.65);background:var(--card);border-radius:11px;padding:5px 2px 4px;
+    cursor:pointer;text-align:center;box-shadow:0 4px 12px rgba(46,80,30,.15);color:var(--ink);
+    font-family:inherit;position:relative;
+  }
+  .prop:disabled{opacity:.45;cursor:not-allowed}
+  .prop:not(:disabled):active{transform:scale(.96)}
+  .prop .p-icon{font-size:16px;line-height:1}
+  .prop .p-icon svg{width:17px;height:17px;display:block;margin:0 auto}
+  .prop .p-img{width:22px;height:22px;object-fit:cover;border-radius:7px;display:block;margin:0 auto}
+  .prop.active{outline:3px solid var(--accent);border-color:var(--accent)}
+  .prop.armed{outline:3px solid var(--red);border-color:var(--red)}
+  .level-btn.armed,.icon-btn.armed{outline:3px solid var(--red);border-color:var(--red)}
+  .prop .p-name{display:block;font-weight:700;font-size:10px;margin-top:2px;line-height:1.2;white-space:nowrap}
+  .prop .p-desc{display:none}
+  .prop .count{
+    position:absolute;top:-5px;right:-2px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;
+    background:var(--red);color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;
+    border:2px solid #fff;
+  }
+  .rules{
+    margin-top:16px;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);
+    font-size:13.5px;line-height:1.85;color:var(--ink);
+  }
+  .rules h2{font-family:"ZCOOL KuaiLe",sans-serif;font-size:19px;margin:0 0 4px;font-weight:400}
+  .rules ol{margin:0;padding-left:20px}
+  .rules li::marker{color:var(--green);font-weight:700}
+  /* ---- toast & overlay ---- */
+  .toast{
+    position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top, 0px));bottom:auto;transform:translate(-50%,-12px);background:#2e3a24;color:#fff;
+    padding:10px 18px;border-radius:999px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;
+    transition:all .25s ease;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:88vw;text-align:center;
+  }
+  .toast.error{background:#8c2f33}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,30,14,.62);display:none;align-items:center;justify-content:center;
+    z-index:90;padding:18px;
+  }
+  .overlay.show{display:flex}
+  .panel{
+    background:var(--card);border-radius:24px;padding:26px 22px 22px;max-width:400px;width:100%;text-align:center;
+    box-shadow:0 24px 60px rgba(0,0,0,.4);animation:panelin .3s ease;
+  }
+  @keyframes panelin{from{transform:scale(.9) translateY(12px);opacity:0}to{transform:none;opacity:1}}
+  .panel h2{font-family:"ZCOOL KuaiLe",sans-serif;font-size:32px;margin:6px 0 4px;font-weight:400}
+  .panel p{margin:6px 0;color:var(--muted);font-size:14px;line-height:1.7}
+  .panel .big-stats{display:flex;gap:8px;margin:14px 0}
+  .panel .big-stats div{flex:1;background:var(--card2);border-radius:12px;padding:10px 4px;font-size:12px;color:var(--muted)}
+  .panel .big-stats b{display:block;font-size:20px;color:var(--ink)}
+  .btn{
+    display:block;width:100%;border:none;border-radius:999px;padding:13px;font-size:16px;font-weight:900;cursor:pointer;
+    font-family:inherit;margin-top:8px;
+  }
+  .btn.primary{background:var(--green);color:#fff;box-shadow:0 6px 0 var(--green-dark)}
+  .btn.primary:active{transform:translateY(3px);box-shadow:0 3px 0 var(--green-dark)}
+  .btn.ghost{background:var(--card2);color:var(--ink);border:2px solid #d8e6c4}
+  .confetti{position:fixed;top:-12px;width:9px;height:14px;z-index:95;pointer-events:none;border-radius:2px;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(105vh) rotate(720deg);opacity:.85}}
+  .sheep-svg{width:110px;height:86px}
+  .overlay-faces{display:flex;gap:12px;justify-content:center;margin-bottom:4px}
+  .overlay-faces img{width:72px;height:72px;border-radius:18px;object-fit:cover;border:3px solid #fff;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+  .icon-btn svg{width:18px;height:18px;display:block;margin:0 auto}
+  .icon-btn .mute-line{display:none}
+  .icon-btn.muted .mute-line{display:block}
+  .icon-btn.muted .wave{display:none}
+  .stats svg.stat-ic{width:17px;height:17px;vertical-align:-3px}
+  @media (max-width:420px){
+    .wrap{padding:10px 10px 28px}
+    .stats{gap:8px;font-size:13px}
+    .tile{width:58px;height:58px}
+    .prop .p-desc{display:none}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  }
+  /* ---- 视图切换：游戏 / 我的 ---- */
+  .view{display:none}
+  .view.show{display:block}
+  .level-nav{display:flex;gap:6px;align-items:center}
+  .level-label{font-family:"ZCOOL KuaiLe",sans-serif;font-size:15px;min-width:52px;text-align:center;white-space:nowrap}
+  .level-btn:disabled{opacity:.45;cursor:not-allowed}
+  .me-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 4px}
+  .me-header h2{font-family:"ZCOOL KuaiLe",sans-serif;font-size:26px;margin:0;font-weight:400}
+  .me-header .back-btn{border:2px solid rgba(255,255,255,.7);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(46,80,30,.14)}
+  /* ---- 我的 / 背包 / 存档 ---- */
+  .me-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;align-items:stretch}
+  .me-bar .me-chip{min-width:0;background:var(--card);border-radius:12px;padding:8px 10px;font-size:12px;color:var(--muted);box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center}
+  .me-bar .me-chip b{display:block;font-size:15px;color:var(--ink);word-break:break-all;line-height:1.35}
+  .panel-sec{margin-top:16px;background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow);scroll-margin-top:12px}
+  .panel-sec h2{font-family:"ZCOOL KuaiLe",sans-serif;font-size:21px;margin:0 0 4px;font-weight:400}
+  .panel-sec h3{font-size:15px;margin:16px 0 8px}
+  .panel-sec p.sub{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.7}
+  .bag-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .bag-item{background:var(--card2);border-radius:14px;padding:10px 6px;text-align:center;border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+  .bag-item .bi{font-size:22px;line-height:1}
+  .bag-item .bi img{width:30px;height:30px;object-fit:cover;border-radius:8px;display:block;margin:0 auto}
+  .bag-item .bi svg{width:24px;height:24px;display:block;margin:0 auto}
+  .bag-item b{display:block;font-size:19px;margin-top:4px}
+  .bag-item span{font-size:12px;color:var(--muted)}
+  .bag-item .src{font-size:11px;color:var(--green);font-weight:700;display:block}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row>*{flex:1;min-width:110px}
+  .row .grow{flex:2}
+  label.f{display:block;font-size:13px;font-weight:700;margin:10px 0 4px}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    width:100%;border:2px solid #d8e6c4;border-radius:12px;padding:10px 12px;font-family:inherit;font-size:15px;background:#fff;color:#222;box-sizing:border-box}
+  @media (prefers-color-scheme: dark){input[type=text],input[type=number],input[type=date],select,textarea{background:#1c2a16;color:#eef5e4;border-color:#46583a}}
+  textarea{min-height:88px;resize:vertical;font-size:13px;line-height:1.6}
+  .btn.small{width:auto;display:inline-block;padding:9px 16px;font-size:14px;margin-top:0}
+  .btn.warn{background:var(--accent);color:#fff;box-shadow:0 5px 0 #c77a0a}
+  .btn.danger{background:var(--red);color:#fff;box-shadow:0 5px 0 #a32e32}
+  .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:0 3px 0 rgba(0,0,0,.15)}
+  .btn:disabled:active{transform:none}
+  .check-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:10px 0}
+  .check-day{background:var(--card2);border-radius:12px;padding:8px 2px;text-align:center;font-size:11px;color:var(--muted);border:2px solid transparent}
+  .check-day b{display:block;font-size:13px;color:var(--ink)}
+  .check-day.done{border-color:var(--green);background:#e7f6df}
+  .check-day.today{border-color:var(--accent)}
+  .code-list{margin-top:10px;display:grid;gap:6px}
+  .code-row{display:flex;gap:8px;align-items:center;background:var(--card2);border-radius:10px;padding:8px 10px;font-family:ui-monospace,Menlo,monospace;font-size:13px;word-break:break-all}
+  .code-row code{flex:1}
+  .code-row button{flex:none;border:1px solid #d8e6c4;background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px}
+  .log{margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.8;color:var(--muted)}
+  .log li::marker{color:var(--green)}
+  .hidden{display:none !important}
+  .kv{font-size:13px;line-height:1.8;color:var(--muted)}
+  .kv b{color:var(--ink)}
+  .mono{font-family:ui-monospace,Menlo,monospace;word-break:break-all}
+  /* 设备码：文本本身可长按选中手动复制，点一下走健壮复制流程 */
+  .device-code{user-select:text;-webkit-user-select:text;cursor:pointer}
+  #deviceChip{cursor:pointer}
+  .copy-hint{display:block;font-size:10px;color:var(--green);font-weight:700;margin-top:2px}
+  .copy-hint-inline{font-size:10px;color:var(--green);font-weight:700;white-space:nowrap}
+  .tag{display:inline-block;background:#e7f6df;color:var(--green-dark);border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700}
+  .radio-row{display:flex;gap:8px;flex-wrap:wrap}
+  .radio-row label{flex:1;min-width:140px;border:2px solid #d8e6c4;border-radius:12px;padding:10px;cursor:pointer;font-size:13px;line-height:1.6}
+  .radio-row input{margin-right:6px}
+  #overlayReward{margin-top:8px;font-size:13px;color:var(--green-dark);font-weight:700;line-height:1.6}
+  @media (max-width:420px){.bag-grid{grid-template-columns:repeat(4,1fr)}.check-strip{gap:4px}}
+
+  /* ---- 我的：四个入口 / 子弹窗 / 商城 / 抽奖 ---- */
+  .me-bar .me-chip{display:flex;flex-direction:column;justify-content:center}
+  .me-bar .me-chip:nth-child(5){grid-column:span 2}
+  .me-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;align-items:stretch}
+  .me-action{border:2px solid rgba(255,255,255,.65);background:var(--card);border-radius:16px;padding:10px 4px;cursor:pointer;text-align:center;box-shadow:0 4px 12px rgba(46,80,30,.15);color:var(--ink);font-family:inherit;min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px}
+  .me-action:active{transform:scale(.97)}
+  .me-action .ma-name{display:block;font-weight:900;font-size:16px;line-height:1.3}
+  .me-action .ma-desc{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;text-align:center}
+  .level-btn.locked{opacity:.62;background:#e9e4d8;border-color:#cfc8b4}
+  .wallet-label{font-size:11px;font-weight:500;color:var(--muted)}
+  .sub-overlay{position:fixed;inset:0;background:rgba(20,30,14,.62);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:18px;overflow-y:auto}
+  .sub-overlay.show{display:flex}
+  .sub-panel{background:var(--card);border-radius:20px;max-width:440px;width:100%;margin:auto;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow-y:auto;flex:none;max-height:calc(100dvh - 36px)}
+  .sub-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px}
+  .sub-head h3{margin:0;font-family:"ZCOOL KuaiLe",sans-serif;font-size:22px;font-weight:400}
+  .sub-close{border:2px solid #d8e6c4;background:var(--card2);color:var(--ink);width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer;flex:none}
+  .sub-body{padding:2px 16px 6px;font-size:14px;line-height:1.7;overflow-y:auto}
+  .sub-body p.sub{color:var(--muted);font-size:13px;margin:0 0 10px}
+  .sub-body .row{align-items:center}
+  #panel-redeem .row{flex-wrap:nowrap}
+  #panel-redeem .row input{flex:1;min-width:0}
+  #panel-redeem .row .btn{flex:none}
+  .sub-foot{padding:12px 16px 16px}
+  .sub-foot .btn{margin-top:0}
+  .sub-panel.shake-sub{animation:shake .3s ease}
+  .shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+  .shop-item{background:var(--card2);border-radius:12px;padding:8px 4px 9px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:0}
+  .shop-item .si svg{width:22px;height:22px;display:block;margin:0 auto}
+  .shop-item .si img{width:24px;height:24px;border-radius:7px;object-fit:cover;display:block;margin:0 auto}
+  .shop-item b{display:block;font-size:13px;margin-top:3px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .shop-item .sd{display:block;font-size:10px;color:var(--muted);line-height:1.4;min-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .shop-item .sp{display:block;font-weight:900;color:var(--green-dark);margin-top:3px;font-size:12px;white-space:nowrap}
+  .shop-item .so{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;white-space:nowrap}
+  .shop-item .btn{width:100%;padding:6px 4px;font-size:13px;box-shadow:0 3px 0 var(--green-dark)}
+  .prize-table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0 10px;table-layout:fixed}
+  .prize-table th:nth-child(2),.prize-table td:nth-child(2){text-align:right}
+  .prize-table th,.prize-table td{padding:6px 8px;border-bottom:1px solid #e2e8d2;text-align:left}
+  .prize-table th{color:var(--muted);font-weight:700}
+  .lottery-result{text-align:center;font-weight:900;font-size:15px;padding:10px;background:var(--card2);border-radius:12px;margin:10px 0}
+
+  /* ---- 转盘抽奖 ---- */
+  .wheel-stage{position:relative;width:min(300px,82vw);aspect-ratio:1;margin:6px auto 4px}
+  .wheel-spin{position:absolute;inset:0;will-change:transform}
+  .wheel-spin svg{width:100%;height:100%;display:block;filter:drop-shadow(0 6px 14px rgba(46,80,30,.25))}
+  .wheel-pointer{position:absolute;left:50%;top:-6px;transform:translateX(-50%);z-index:3;width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:22px solid var(--red);filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+  .wheel-pointer::after{content:"";position:absolute;left:-4px;top:-20px;width:8px;height:8px;border-radius:50%;background:#fff;border:2px solid var(--red)}
+  .wheel-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:var(--green);color:#fff;font-family:inherit;font-weight:900;font-size:13px;line-height:1.25;cursor:pointer;box-shadow:0 4px 0 var(--green-dark),0 8px 18px rgba(0,0,0,.3)}
+  .wheel-hub:active{transform:translate(-50%,-50%) scale(.96)}
+  .wheel-hub:disabled{opacity:.6;cursor:wait}
+  .wheel-balance{text-align:center;color:var(--muted);font-size:12px;margin:2px 0 0}
+  .panel-notice{display:none;background:#fdecec;color:#8c2f33;border:1px solid #f3c2c2;border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:700;line-height:1.5;margin:8px 0 0;text-align:center}
+  .panel-notice.show{display:block}
+  .kv.msg-error,.sub-body .kv.msg-error{color:var(--red);font-weight:700}
+  .prob-btn{display:block;margin:10px auto 0;border:1px solid #d8e6c4;background:var(--card2);color:var(--muted);border-radius:999px;padding:5px 14px;font-family:inherit;font-size:12px;cursor:pointer}
+  .prob-overlay{position:fixed;inset:0;background:rgba(20,30,14,.62);display:none;align-items:center;justify-content:center;z-index:120;padding:20px}
+  .prob-overlay.show{display:flex}
+  .prob-card{background:var(--card);border-radius:18px;max-width:340px;width:100%;padding:16px 16px 14px;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+  .prob-card h4{margin:0 0 6px;font-family:"ZCOOL KuaiLe",sans-serif;font-size:18px;font-weight:400}
+  .prob-card p{margin:8px 0 0;color:var(--muted);font-size:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div id="viewGame" class="view show">
+  <div class="topbar">
+    <div class="level-nav" role="group" aria-label="选择关卡">
+      <button class="level-btn" id="btnPrevLevel" type="button">‹ 上一关</button>
+      <span class="level-label" id="levelLabel">第 1 关</span>
+      <span class="tag hidden" id="tempBadge">临时通行中</span>
+      <button class="level-btn" id="btnNextLevel" type="button">下一关 ›</button>
+    </div>
+    <div class="stats">
+      <span><svg class="stat-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> <b id="timer">00:00</b></span>
+      <span><svg class="stat-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5 14.9 8.6 21.5 9.5 16.7 14.1 17.9 20.7 12 17.6 6.1 20.7 7.3 14.1 2.5 9.5 9.1 8.6z"/></svg> <b id="score">0</b></span>
+      <span class="wallet" title="羊毛币"><svg class="stat-ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#ffd43b" stroke="#c98a00" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#c98a00" stroke-width="1.6"/></svg> <span class="wallet-label">羊毛币</span> <b id="walletCoins">0</b></span>
+      <button class="icon-btn" id="soundBtn" type="button" aria-label="开关音效"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" stroke="none"/><path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7"/><line class="mute-line" x1="16" y1="9" x2="22" y2="15"/><line class="mute-line" x1="22" y1="9" x2="16" y2="15"/></svg></button>
+      <button class="icon-btn" id="restartBtn" type="button" aria-label="重新开始"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></button>
+      <button class="level-btn" id="meBtn" type="button">我的</button>
+    </div>
+  </div>
+
+  <div class="status">
+    <div class="chip">剩余牌数<b id="remain">0</b></div>
+    <div class="chip">已消除组数<b id="groups">0</b></div>
+    <div class="chip">步数<b id="moves">0</b></div>
+  </div>
+  <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
+  <div class="progress-label"><span id="progressText">消除进度 0%</span><span id="capacityNote">槽位满 7 张即失败</span></div>
+
+  <section class="board-frame" aria-label="牌堆">
+    <div class="board-wrap" id="boardWrap">
+      <div class="board-inner" id="board"></div>
+    </div>
+  </section>
+
+  <div class="slot-label"><span>点击上方没有被压住的牌，放入槽位</span><span>3 张相同即消除</span></div>
+  <section class="slotbar" id="slotbar" aria-label="槽位">
+    <div class="slots" id="slots"></div>
+    <div class="hold-row">
+      <div class="hold-label">暂存区（点一下可放回槽位）</div>
+      <div class="hold" id="hold"></div>
+    </div>
+  </section>
+
+  <div class="props">
+    <button class="prop" id="propUndo" type="button" aria-label="撤回"><span class="count" id="undoCount">3</span><span class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></span><span class="p-name">撤回</span><span class="p-desc">退回上一步</span></button>
+    <button class="prop" id="propShuffle" type="button" aria-label="洗牌"><span class="count" id="shuffleCount">2</span><span class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg></span><span class="p-name">洗牌</span><span class="p-desc">打乱剩余牌</span></button>
+    <button class="prop" id="propRemove" type="button" aria-label="移出"><span class="count" id="removeCount">1</span><span class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v8"/><path d="m8 7 4-4 4 4"/><path d="M4 13v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><path d="M4 13h16"/></svg></span><span class="p-name">移出</span><span class="p-desc">移出 3 张牌</span></button>
+    <button class="prop" id="propHint" type="button" aria-label="提示"><span class="count" id="hintCount">3</span><span class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.7 1 1.5 1 2.5h6c0-1 .2-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg></span><span class="p-name">提示</span><span class="p-desc">高亮可配对</span></button>
+    <button class="prop" id="propPeek" type="button" aria-label="透视"><span class="count" id="peekCount">2</span><img class="p-img" src="assets/icon-peek.webp" alt="" /><span class="p-name">透视</span><span class="p-desc">看清被压的牌</span></button>
+    <button class="prop" id="propHammer" type="button" aria-label="小锤"><span class="count" id="hammerCount">2</span><img class="p-img" src="assets/icon-hammer.webp" alt="" /><span class="p-name">小锤</span><span class="p-desc">敲掉一张牌</span></button>
+    <button class="prop" id="propExtra" type="button" aria-label="加槽"><span class="count" id="extraCount">1</span><img class="p-img" src="assets/icon-extra.webp" alt="" /><span class="p-name">加槽</span><span class="p-desc">多一个槽位</span></button>
+    <button class="prop" id="propWand" type="button" aria-label="魔法棒"><span class="count" id="wandCount">1</span><img class="p-img" src="assets/icon-wand.webp" alt="" /><span class="p-name">魔法棒</span><span class="p-desc">自动消一组</span></button>
+    <button class="prop" id="propScissors10" type="button" aria-label="小剪刀"><span class="count" id="scissors10Count">0</span><span class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.4 7.6 20 19M8.4 16.4 20 5"/></svg></span><span class="p-name">小剪刀</span><span class="p-desc">去掉 10 组</span></button>
+    <button class="prop" id="propScissors20" type="button" aria-label="大剪刀"><span class="count" id="scissors20Count">0</span><span class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.4 7.6 20 19M8.4 16.4 20 5"/><path d="M14 12h6"/></svg></span><span class="p-name">大剪刀</span><span class="p-desc">去掉 20 组</span></button>
+    <button class="prop" id="propPass" type="button" aria-label="临时通行证"><span class="count" id="passCount">0</span><span class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M13 6v2M13 11v2M13 16v2"/></svg></span><span class="p-name">临时通行证</span><span class="p-desc">临时解锁全部关卡</span></button>
+  </div>
+
+  <section class="rules">
+    <h2>怎么玩</h2>
+    <ol>
+      <li>点击牌堆里<strong>没有被压住</strong>的牌，牌会落入下方槽位；被压住的牌颜色会变暗，点不动。</li>
+      <li>槽位里凑齐 <strong>3 张相同</strong>的牌就会消除。槽位最多放 <strong>7 张</strong>，放满还没消除就失败啦。</li>
+      <li>通关当前关卡，才能解锁下一关。第一关默认开放，越往后牌越多、种类越多、层数越高。用顶栏的「上一关 / 下一关」切换已解锁的关卡。临时通行证可以在本次打开游戏期间进入任意关卡，但通关不计入通关记录。</li>
+      <li>道具都在「我的」页面里的背包里，用一个少一个，去商城用羊毛币购买。<strong>透视</strong>能看清被压住的牌 4 秒；<strong>小锤</strong>点一张露在外面的牌直接敲掉，不占槽位；<strong>加槽</strong>给本局多加一个槽位；<strong>魔法棒</strong>自动消掉外面凑够三张的一组；<strong>小剪刀</strong>一次去掉 10 组能凑三张的组合，<strong>大剪刀</strong>一次去掉 20 组。<strong>复活币</strong>不在对局道具栏里，只在失败结算时使用，消耗 1 个把上一步退回，继续玩这一局。</li>
+      <li>玩到一半点“上一关 / 下一关”或“重新开始”，会先让你再点一次确认，不会一误触就丢了当前进度。</li>
+      <li><strong>羊毛币</strong>可以靠每日签到、通关和兑换码获得，在商城买道具和抽奖券。抽奖券可以在抽奖里抽羊毛币。进度会自动保存在本机浏览器里，关掉页面再打开也不会丢；也可以去「我的」页面里的「存档管理」下载存档备份，存档绑定本机设备码，只能导回同一台设备、同一个浏览器。</li>
+    </ol>
+  </section>
+  </div>
+
+  <div id="viewMe" class="view">
+  <div class="me-header">
+    <button class="back-btn" id="backBtn" type="button">← 返回游戏</button>
+    <h2>我的</h2>
+  </div>
+  <div class="me-bar">
+    <div class="me-chip" id="deviceChip" role="button" tabindex="0" title="点击或长按复制设备码">我的设备码<b class="mono device-code" id="deviceCode">生成中…</b><span class="copy-hint">点击或长按复制</span></div>
+    <div class="me-chip">羊毛币<b id="walletCoinsMe">0</b></div>
+    <div class="me-chip">抽奖券<b id="walletTicketsMe">0 张</b></div>
+    <div class="me-chip">背包道具<b id="bagTotal">0 件</b></div>
+    <div class="me-chip">签到<b id="checkinState">今天还没签到</b></div>
+  </div>
+
+  <div class="me-actions">
+    <button class="me-action" id="actCheckin" type="button"><span class="ma-name">签到</span><span class="ma-desc">每天领羊毛币</span></button>
+    <button class="me-action" id="actRedeem" type="button"><span class="ma-name">兑换</span><span class="ma-desc">兑换码换羊毛币和抽奖券</span></button>
+    <button class="me-action" id="actLottery" type="button"><span class="ma-name">抽奖</span><span class="ma-desc">抽奖券抽羊毛币</span></button>
+    <button class="me-action" id="actShop" type="button"><span class="ma-name">商城</span><span class="ma-desc">用羊毛币买道具</span></button>
+  </div>
+
+  <section class="panel-sec" id="secBackpack">
+    <h2>我的背包</h2>
+    <p class="sub">道具存在背包里，跨关卡通用，用一个少一个。道具在商城里用羊毛币购买。进度会自动保存在本机浏览器里，换浏览器或清除缓存会丢失，重要进度请用「存档管理」下载存档备份。</p>
+    <div class="bag-grid" id="bagGrid"></div>
+    <p class="kv" style="margin-top:10px">最近获得：</p>
+    <ul class="log" id="acquireLog"><li>新手礼包已放入背包。</li></ul>
+  </section>
+
+  <div class="sub-overlay" id="subOverlay" role="dialog" aria-modal="true">
+    <div class="sub-panel hidden" id="panel-checkin">
+      <div class="sub-head"><h3>每日签到</h3><button class="sub-close" type="button" aria-label="关闭">×</button></div>
+      <div class="sub-body">
+        <p class="sub">每天签到领羊毛币，连续签到 7 天一个循环，第 7 天最多。</p>
+        <div class="check-strip" id="checkStrip"></div>
+        <div class="row">
+          <button class="btn primary small grow" id="checkinBtn" type="button">签到领羊毛币</button>
+          <span class="kv" id="checkinInfo">连续签到 0 天</span>
+        </div>
+      </div>
+      <div class="sub-foot"><button class="btn ghost sub-back" type="button">返回</button></div>
+    </div>
+    <div class="sub-panel hidden" id="panel-redeem">
+      <div class="sub-head"><h3>兑换</h3><button class="sub-close" type="button" aria-label="关闭">×</button></div>
+      <div class="sub-body">
+        <p class="sub">输入兑换码，可兑换羊毛币和抽奖券。兑换码不区分大小写，空格会自动忽略。</p>
+        <div class="row">
+          <input type="text" class="grow mono" id="redeemInput" placeholder="输入兑换码" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+          <button class="btn primary small" id="redeemBtn" type="button">兑换</button>
+        </div>
+        <p class="kv" id="redeemMsg" style="margin-top:8px">已兑换的兑换码会记录在存档里，同一张绑定码只能用一次，通用码按剩余次数扣减。</p>
+        <ul class="log" id="redeemLog"></ul>
+      </div>
+      <div class="sub-foot"><button class="btn ghost sub-back" type="button">返回</button></div>
+    </div>
+    <div class="sub-panel hidden" id="panel-lottery">
+      <div class="sub-head"><h3>抽奖</h3><button class="sub-close" type="button" aria-label="关闭">×</button></div>
+      <div class="sub-body">
+        <p class="wheel-balance" id="lotteryBalance">羊毛币 0 · 抽奖券 0 张</p>
+        <p class="panel-notice" id="lotteryNotice" role="status"></p>
+        <div class="wheel-stage" aria-label="抽奖转盘">
+          <div class="wheel-pointer" aria-hidden="true"></div>
+          <div class="wheel-spin" id="wheelSpin"><svg id="wheelSvg" viewBox="-105 -105 210 210" role="img" aria-label="奖品转盘"></svg></div>
+          <button class="wheel-hub" id="wheelHub" type="button">抽 1 次</button>
+        </div>
+        <div class="lottery-result" id="lotteryResult">点中间按钮开始抽奖</div>
+        <div class="row"><button class="btn primary small grow" id="lotteryBtn" type="button">抽 1 次（1 张抽奖券）</button></div>
+        <p class="sub" style="text-align:center;margin-top:8px">抽奖券 1 张抽 1 次，奖金直接进钱包。</p>
+        <ul class="log" id="lotteryLog"></ul>
+        <button class="prob-btn" id="probBtn" type="button">奖品概率</button>
+      </div>
+      <div class="sub-foot"><button class="btn ghost sub-back" type="button">返回</button></div>
+    </div>
+    <div class="sub-panel hidden" id="panel-shop">
+      <div class="sub-head"><h3>商城</h3><button class="sub-close" type="button" aria-label="关闭">×</button></div>
+      <div class="sub-body">
+        <p class="kv" id="shopBalance">0 羊毛币</p>
+        <p class="panel-notice" id="shopNotice" role="status"></p>
+        <div class="shop-grid" id="shopGrid"></div>
+        <p class="sub">道具买到后放进背包，在对局中使用。临时通行证使用后，本次可以进入任意关卡，通关不计入通关记录。</p>
+      </div>
+      <div class="sub-foot"><button class="btn ghost sub-back" type="button">返回</button></div>
+    </div>
+  </div>
+
+  <div class="prob-overlay" id="probOverlay" role="dialog" aria-modal="true" aria-label="奖品概率">
+    <div class="prob-card">
+      <h4>奖品概率</h4>
+      <table class="prize-table">
+        <tr><th>奖品</th><th>概率</th></tr>
+        <tr><td>3 羊毛币</td><td>40%</td></tr>
+        <tr><td>5 羊毛币</td><td>30%</td></tr>
+        <tr><td>10 羊毛币</td><td>18%</td></tr>
+        <tr><td>20 羊毛币</td><td>8%</td></tr>
+        <tr><td>50 羊毛币</td><td>3%</td></tr>
+        <tr><td>100 羊毛币</td><td>0.9%</td></tr>
+        <tr><td>500 羊毛币</td><td>0.1%</td></tr>
+      </table>
+      <p>每次抽奖按以上概率随机抽取 1 个奖品，抽奖券 1 张抽 1 次。</p>
+      <button class="btn primary" id="probClose" type="button" style="margin-top:12px">知道了</button>
+    </div>
+  </div>
+
+  <section class="panel-sec" id="secSave">
+    <h2>存档管理</h2>
+    <p class="sub">进度平时会自动保存在本机浏览器里，关掉页面再打开也不会丢。导出的存档绑定设备码：只能导入回同一台设备、同一个浏览器，避免存档被随意分享。存档包含背包、签到、已兑换记录和过关记录，不包含正在进行的某一局牌面。</p>
+    <p class="kv">本机设备码：<b class="mono device-code" id="saveDeviceCode" role="button" tabindex="0" title="点击或长按复制设备码">—</b> <span class="copy-hint-inline">点击或长按复制</span><br />存档时间：<b id="saveInfo">尚未导出过存档</b><br />存档内容：<b id="saveSummary">—</b></p>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary small grow" id="saveDownload" type="button">下载存档 .json</button>
+      <button class="btn small grow" id="saveCopy" type="button">复制存档字符串</button>
+    </div>
+    <label class="f" for="saveText">导入存档（粘贴存档字符串，或选择 .json 文件）</label>
+    <textarea id="saveText" placeholder="粘贴以 YYSAVE1. 开头的存档字符串，或点下面选择文件"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary small grow" id="saveImport" type="button">导入粘贴的存档</button>
+      <label class="btn small grow" style="text-align:center;cursor:pointer">选择存档文件<input type="file" id="saveFile" accept=".json,application/json" class="hidden" /></label>
+    </div>
+    <p class="kv" id="saveMsg" style="margin-top:8px"></p>
+  </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true">
+  <div class="panel">
+    <div class="overlay-faces" aria-hidden="true"><img src="assets/face-dragon.webp" alt="" /><img src="assets/face-sheep.webp" alt="" /></div>
+    <h2 id="overlayTitle">过关啦！</h2>
+    <p id="overlayText"></p>
+    <div id="overlayReward"></div>
+    <div class="big-stats">
+      <div>得分<b id="finalScore">0</b></div>
+      <div>用时<b id="finalTime">00:00</b></div>
+      <div>消除<b id="finalGroups">0 组</b></div>
+    </div>
+    <button class="btn warn hidden" id="overlayRevive" type="button">使用复活币复活</button>
+    <button class="btn primary" id="overlayMain" type="button">再来一局</button>
+    <button class="btn ghost" id="overlaySub" type="button">挑战第二关</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var TILE_STEP = 62, TILE_SIZE = 58;
+  var TYPES_ALL = [
+    {id:"dragon", img:"assets/face-dragon.webp", name:"小黄龙"},
+    {id:"bunny", img:"assets/face-bunny.webp", name:"小白兔"},
+    {id:"sheep", img:"assets/face-sheep.webp", name:"小绵羊"},
+    {id:"puppy", img:"assets/face-puppy.webp", name:"小狗狗"},
+    {id:"bear", img:"assets/face-bear.webp", name:"粉小熊"},
+    {id:"cat", img:"assets/face-cat.webp", name:"橘猫"},
+    {id:"dino", img:"assets/face-dino.webp", name:"小恐龙"},
+    {id:"bird", img:"assets/face-bird.webp", name:"蓝小鸟"},
+    {id:"frog", img:"assets/face-frog.webp", name:"小青蛙"},
+    {id:"starbunny", img:"assets/face-starbunny.webp", name:"星星兔"}
+  ];
+  /* 第 1、2 关保持原有设计；第 3 关起程序化生成，关卡号无限递增。 */
+  var LEVEL_DEFS = {
+    1: {
+      name: "第一关",
+      types: TYPES_ALL.slice(0, 6),
+      layers: [
+        {cols:6, rows:4, ox:0,   oy:0},
+        {cols:5, rows:3, ox:0.5, oy:0.5},
+        {cols:3, rows:3, ox:1.5, oy:0.5},
+        {cols:3, rows:1, ox:2,   oy:1.5}
+      ]
+    },
+    2: {
+      name: "第二关",
+      types: TYPES_ALL.slice(0, 10),
+      layers: [
+        {cols:7, rows:6, ox:0,   oy:0},
+        {cols:6, rows:5, ox:0.5, oy:0.5},
+        {cols:5, rows:4, ox:1,   oy:1},
+        {cols:3, rows:3, ox:2,   oy:1.5},
+        {cols:2, rows:2, ox:2.5, oy:2},
+        {cols:3, rows:1, ox:2.5, oy:2.5}
+      ]
+    }
+  };
+  /* 程序化关卡：每层牌数都是 3 的倍数（列数或行数含因子 3），
+     配合按层内三张一组的发牌（assignTypesLayered），每层都能在
+     上层清完后按组消除，保证有解。难度随关卡递增：种类数、
+     层数、总牌数逐步增加并设上限（种类 10、层数 7），到上限后
+     再以小层加行（每次 +3 张）和错位加密（上层全部半格错位、
+     覆盖更多下层牌）继续加难，总牌数不再无限制膨胀。 */
+  function getLevelConfig(level){
+    if (LEVEL_DEFS[level]) return LEVEL_DEFS[level];
+    var typesCount = Math.min(10, 7 + Math.floor((level - 2) / 2));
+    var layerCount = Math.min(7, 5 + Math.floor((level - 3) / 2));
+    var base = [
+      {cols:7, rows:6, ox:0,   oy:0},
+      {cols:6, rows:5, ox:0.5, oy:0.5},
+      {cols:6, rows:3, ox:1,   oy:1},
+      {cols:3, rows:4, ox:2,   oy:1.5},
+      {cols:3, rows:3, ox:2,   oy:2},
+      {cols:3, rows:2, ox:2.5, oy:2.5},
+      {cols:3, rows:1, ox:2,   oy:3}
+    ];
+    var layers = base.slice(0, layerCount);
+    if (level >= 9){
+      var extra = Math.min(6, level - 8);
+      layers[3] = {cols:3, rows:4 + extra, ox:2, oy:1.5};
+    }
+    if (level >= 13){
+      layers = layers.map(function(L, i){
+        if (i === 0) return L;
+        return {cols:L.cols, rows:L.rows, ox:0.5, oy:0.5 + (i - 1) * 0.5};
+      });
+    }
+    return {name: "第 " + level + " 关", types: TYPES_ALL.slice(0, typesCount), layers: layers};
+  }
+
+  var boardEl = document.getElementById("board");
+  var boardWrap = document.getElementById("boardWrap");
+  var slotsEl = document.getElementById("slots");
+  var holdEl = document.getElementById("hold");
+  var slotbarEl = document.getElementById("slotbar");
+  var toastEl = document.getElementById("toast");
+  var overlayEl = document.getElementById("overlay");
+
+  var state = null;
+  var busy = false;
+  var timerId = null;
+  var soundOn = true;
+  var audioCtx = null;
+  var toastTimer = null;
+  /* ---- 防中途跳关：关卡只能由下面显式入口改变 ---- */
+  /* startGame 是唯一能改变关卡/重置进度的入口。计时器回调只加时间，
+     resize 回调只调牌堆尺寸，visibilitychange 没有监听，状态恢复
+     (restore) 不碰 level——这几条路都不可能把进行中的对局重置回第一关。
+     关卡按钮/重开按钮走 requestLevelChange / onRestart，玩到一半时第
+     一次点只“武装”确认（防误触），第二次点才真的切换；结算遮罩打开
+     时顶栏 pointer-events 被禁掉，结算按钮连点也只认第一次。 */
+  var overlayBusy = false;    /* 结算按钮一次点击后即锁定，直到下一局开始 */
+  var overlayMainTarget = 1, overlaySubTarget = 1; /* 结算按钮要进的关卡，由 endGame 按胜负设定 */
+  var armedKey = null;        /* 当前被“武装”等待二次确认的操作 */
+  var armedTimer = null;
+  var peekTimer = null;
+
+  /* ---------- 背包 / 设备码 / 兑换码 / 存档（纯前端，存档靠文件） ---------- */
+  var PROP_DEFS = [
+    {key:"undo", name:"撤回", code:"UN", desc:"退回上一步", icon:"undo"},
+    {key:"shuffle", name:"洗牌", code:"SH", desc:"打乱剩余牌", icon:"shuffle"},
+    {key:"remove", name:"移出", code:"RM", desc:"移出 3 张牌", icon:"remove"},
+    {key:"hint", name:"提示", code:"HI", desc:"高亮可配对", icon:"hint"},
+    {key:"peek", name:"透视", code:"PK", desc:"看清被压的牌", icon:"peek", img:"assets/icon-peek.webp"},
+    {key:"hammer", name:"小锤", code:"HM", desc:"敲掉一张牌", icon:"hammer", img:"assets/icon-hammer.webp"},
+    {key:"extra", name:"加槽", code:"EX", desc:"多一个槽位", icon:"extra", img:"assets/icon-extra.webp"},
+    {key:"wand", name:"魔法棒", code:"WA", desc:"自动消一组", icon:"wand", img:"assets/icon-wand.webp"},
+    {key:"scissors10", name:"小剪刀", code:"S1", desc:"去掉 10 组", icon:"scissors"},
+    {key:"scissors20", name:"大剪刀", code:"S2", desc:"去掉 20 组", icon:"bigscissors"},
+    {key:"pass", name:"临时通行证", code:"PS", desc:"临时解锁全部关卡", icon:"pass"},
+    {key:"revive", name:"复活币", code:"RV", desc:"失败时复活一次", icon:"revive"}
+  ];
+  var PROP_ICON_SVG = {
+    undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>',
+    shuffle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>',
+    remove:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v8"/><path d="m8 7 4-4 4 4"/><path d="M4 13v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><path d="M4 13h16"/></svg>',
+    hint:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.7 1 1.5 1 2.5h6c0-1 .2-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg>',
+    scissors:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.4 7.6 20 19M8.4 16.4 20 5"/></svg>',
+    bigscissors:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.4 7.6 20 19M8.4 16.4 20 5"/><path d="M14 12h6"/></svg>',
+    revive:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5C7 16 3.5 13 3.5 9.3 3.5 6.6 5.6 4.5 8 4.5c1.6 0 3.1.9 4 2.2.9-1.3 2.4-2.2 4-2.2 2.4 0 4.5 2.1 4.5 4.8 0 3.7-3.5 6.7-8.5 11.2z"/><path d="M8.5 10.5h2l1-2 1.5 3.5 1-1.5h1.5"/></svg>',
+    pass:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M13 6v2M13 11v2M13 16v2"/></svg>'
+  };
+  function propDef(key){ for (var i=0;i<PROP_DEFS.length;i++) if (PROP_DEFS[i].key===key) return PROP_DEFS[i]; return PROP_DEFS[0]; }
+  function propDefByCode(code){ for (var i=0;i<PROP_DEFS.length;i++) if (PROP_DEFS[i].code===code) return PROP_DEFS[i]; return null; }
+  /* 新手礼包：只在首次打开时发一次，之后靠签到/过关/兑换补充 */
+  var bag = {undo:3, shuffle:2, remove:1, hint:3, peek:1, hammer:1, extra:1, wand:1, scissors10:0, scissors20:0, pass:0, revive:0};
+  var checkin = {last:"", streak:0, total:0};
+  var clearedLevels = {};
+  var redeemedCodes = {};
+  var codeUses = {};
+  var acquireLogItems = [{text:"新手礼包：撤回×3、洗牌×2、移出×1、提示×3、透视×1、小锤×1、加槽×1、魔法棒×1"}];
+  /* 羊毛币钱包：签到 / 通关 / 兑换码 / 抽奖进出，持久化进存档。 */
+  var wallet = {coins:0, tickets:0};
+  var unlockedMax = 1; /* 已解锁到的最高关卡，通关后 +1，持久化 */
+  var tempUnlockAll = false; /* 临时通行证：仅本次打开游戏期间生效，不持久化 */
+  var lotteryBusy = false;
+  var wheelRotation = 0;
+  var wheelBuilt = false;
+  var WHEEL_COLORS = ['#ff9f1c','#3f9e4d','#4dabf7','#ff5d8f','#ffd43b','#9775fa','#ff6b6b'];
+  var SHOP_ITEMS = [
+    {key:"undo", price:15}, {key:"revive", price:20}, {key:"hint", price:15}, {key:"peek", price:20},
+    {key:"shuffle", price:25}, {key:"remove", price:30}, {key:"hammer", price:35},
+    {key:"wand", price:50}, {key:"extra", price:60},
+    {key:"scissors10", price:250}, {key:"scissors20", price:400}, {key:"pass", price:100}
+  ];
+  var LOTTERY_PRIZES = [
+    {coins:3, p:40}, {coins:5, p:30}, {coins:10, p:18}, {coins:20, p:8},
+    {coins:50, p:3}, {coins:100, p:0.9}, {coins:500, p:0.1}
+  ];
+  /* ===== CODE-CORE BEGIN =====
+     兑换码核心：加密格式（YY2- 开头）。配套的独立生成器网页从本文件
+     逐字抽取 BEGIN/END 之间的内容复用：改这里要同步生成器，否则两边对不上。
+     payload（加密前明文）：类型 | 到期日 | 次数 | 奖励 | 绑定设备 | 随机盐。
+     奖励段格式为 C{羊毛币}T{抽奖券}，例如 C500T3（羊毛币 500、抽奖券 3 张）、
+     C100T0（只兑羊毛币）、C0T5（只兑抽奖券）。兑换码只兑羊毛币和抽奖券，
+     不兑道具；道具格式的旧码无法解析，会按失效处理。
+     整段经 RC4 加密 + Base32 编码，码面只剩一串编码字符和 8 位签名，
+     不含任何明文字段；签名覆盖整段密文，改动任意一字符都会被拒。
+     提醒：密钥写在前端源码里，任何人读源码都能重算签名——防的是
+     随手改码、改日期，不是服务器级防伪；正式防伪需要服务器。 */
+  var CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  /* 注意：CODE_ALPHABET 只有 31 个字符，hash6 沿用它（不动，
+     否则存档校验会变）。Base32 / 签名 / 随机盐需要满 32 个符号
+     （每字符 5 位），单独用补一位的表。 */
+  var CODE_V2_ALPHABET = CODE_ALPHABET + "1";
+  var CODE_V2_SECRET = "YYSHEEP-V2-7f3a9c2e-K4mQ8w";
+  var CODE_V2_SIG_LEN = 8;
+  function fnv(str, seed){
+    var h = seed >>> 0;
+    for (var i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function hash6(str){
+    var a = fnv(str, 2166136261), b = fnv(str, 42424242), out = "";
+    var x = a, y = b;
+    for (var j=0;j<6;j++){ x = Math.imul(x ^ (y>>>j), 2654435761) >>> 0; out += CODE_ALPHABET[x % 32]; }
+    return out;
+  }
+  /* 奖励对象 -> "C500T3"。羊毛币 0-99999，抽奖券 0-99，至少一项大于 0。 */
+  function codeRewardString(reward){
+    if (!reward || typeof reward !== "object") return null;
+    var c = Number(reward.coins), t = Number(reward.tickets);
+    if (c % 1 !== 0 || t % 1 !== 0 || c < 0 || t < 0 || c > 99999 || t > 99) return null;
+    if (c === 0 && t === 0) return null;
+    return "C" + c + "T" + t;
+  }
+  /* "C500T3" -> {coins:500, tickets:3}。格式不对返回 null。 */
+  function codeParseReward(str){
+    var m = /^C(\d{1,5})T(\d{1,2})$/.exec(str || "");
+    if (!m) return null;
+    var coins = parseInt(m[1], 10), tickets = parseInt(m[2], 10);
+    if (coins === 0 && tickets === 0) return null;
+    return {coins: coins, tickets: tickets};
+  }
+  /* 字节数组 -> Base32 字符串（CODE_V2_ALPHABET，每字符 5 位）。 */
+  function codeBase32Encode(bytes){
+    var out = "", acc = 0, nbits = 0;
+    for (var i=0;i<bytes.length;i++){
+      acc = (acc << 8) | (bytes[i] & 255); nbits += 8;
+      while (nbits >= 5){ nbits -= 5; out += CODE_V2_ALPHABET[(acc >> nbits) & 31]; }
+      acc &= (1 << nbits) - 1;
+    }
+    if (nbits > 0) out += CODE_V2_ALPHABET[(acc << (5 - nbits)) & 31];
+    return out;
+  }
+  /* Base32 字符串 -> 字节数组。非法字符或填充位非零返回 null。 */
+  function codeBase32Decode(str){
+    var out = [], acc = 0, nbits = 0;
+    for (var i=0;i<str.length;i++){
+      var v = CODE_V2_ALPHABET.indexOf(str.charAt(i));
+      if (v < 0) return null;
+      acc = (acc << 5) | v; nbits += 5;
+      if (nbits >= 8){ nbits -= 8; out.push((acc >> nbits) & 255); }
+      acc &= (1 << nbits) - 1;
+    }
+    if (acc !== 0) return null;
+    return out;
+  }
+  /* RC4 流密码：加密解密同一函数，密钥为 CODE_V2_SECRET。 */
+  function codeRc4Crypt(data, keyStr){
+    var S = [], j = 0, tmp, i, k;
+    for (i=0;i<256;i++) S[i] = i;
+    for (i=0;i<256;i++){
+      j = (j + S[i] + keyStr.charCodeAt(i % keyStr.length)) & 255;
+      tmp = S[i]; S[i] = S[j]; S[j] = tmp;
+    }
+    var out = [], a = 0, b = 0;
+    for (k=0;k<data.length;k++){
+      a = (a + 1) & 255; b = (b + S[a]) & 255;
+      tmp = S[a]; S[a] = S[b]; S[b] = tmp;
+      out.push(data[k] ^ S[(S[a] + S[b]) & 255]);
+    }
+    return out;
+  }
+  function codeRandomChars(n){
+    var out = "", i, buf;
+    try{
+      if (typeof crypto !== "undefined" && crypto.getRandomValues){
+        buf = new Uint8Array(n); crypto.getRandomValues(buf);
+        for (i=0;i<n;i++) out += CODE_V2_ALPHABET[buf[i] % 32];
+        return out;
+      }
+    }catch(e){}
+    for (i=0;i<n;i++) out += CODE_V2_ALPHABET[Math.floor(Math.random() * 32)];
+    return out;
+  }
+  /* 内校验：明文（不含校验段）+ 密钥的双哈希，6 位，解密后二次核对。 */
+  function codeV2Checksum(plain){
+    var h1 = fnv(CODE_V2_SECRET + "|CHK1|" + plain, 2166136261);
+    var h2 = fnv(CODE_V2_SECRET + "|CHK2|" + plain, 42424242);
+    var out = "", x = h1, y = h2;
+    for (var j=0;j<6;j++){
+      x = Math.imul(x ^ (y >>> j), 2654435761) >>> 0;
+      y = Math.imul(y ^ (x >>> j), 2246822519) >>> 0;
+      out += CODE_V2_ALPHABET[((x ^ y) >>> 0) % 32];
+    }
+    return out;
+  }
+  /* 外签名：覆盖整段密文，8 位。改动密文任意一字符即不符。 */
+  function codeV2Sign(cipherText){
+    var h1 = fnv(CODE_V2_SECRET + "|SIG1|" + cipherText, 2166136261);
+    var h2 = fnv(CODE_V2_SECRET + "|SIG2|" + cipherText, 42424242);
+    var out = "", x = h1, y = h2;
+    for (var j=0;j<CODE_V2_SIG_LEN;j++){
+      x = Math.imul(x ^ (y >>> j), 2654435761) >>> 0;
+      y = Math.imul(y ^ (x >>> j), 2246822519) >>> 0;
+      out += CODE_V2_ALPHABET[((x ^ y) >>> 0) % 32];
+    }
+    return out;
+  }
+  /* 生成加密兑换码。
+     kind: "B" 绑定码 / "U" 通用码；exp: "YYYYMMDD" 或 "99999999"；
+     uses: 1-999；reward: {coins, tickets} 或 "C500T3" 字符串；
+     bind: 绑定码传 6 位设备后缀，通用码传 "000000" 或空；
+     salt: 可选 6 位随机盐覆盖（默认随机生成，测试可传固定值）。
+     返回 "YY2-XXXXXX-..."，无效返回 null。 */
+  function codeV2Encode(kind, exp, uses, reward, bind, salt){
+    kind = String(kind || "").toUpperCase();
+    if (kind !== "B" && kind !== "U") return null;
+    exp = String(exp || "");
+    if (!/^\d{8}$/.test(exp)) return null;
+    uses = Number(uses);
+    if (uses % 1 !== 0 || uses < 1 || uses > 999) return null;
+    var rewardStr = (typeof reward === "string") ? reward : codeRewardString(reward);
+    if (!rewardStr || !codeParseReward(rewardStr)) return null;
+    bind = String(bind || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (bind === "" && kind === "U") bind = "000000";
+    if (!/^[A-Z0-9]{6}$/.test(bind)) return null;
+    salt = salt ? String(salt).toUpperCase() : codeRandomChars(6);
+    if (!/^[A-Z0-9]{6}$/.test(salt)) return null;
+    var usesStr = ("00" + uses).slice(-3);
+    var plain = kind + "|" + exp + "|" + usesStr + "|" + rewardStr + "|" + bind + "|" + salt;
+    var full = plain + "|" + codeV2Checksum(plain);
+    var bytes = [full.length];
+    for (var i=0;i<full.length;i++) bytes.push(full.charCodeAt(i) & 255);
+    var cipherText = codeBase32Encode(codeRc4Crypt(bytes, CODE_V2_SECRET));
+    var body = cipherText + codeV2Sign(cipherText);
+    var grouped = "YY2-";
+    for (var j=0;j<body.length;j++){
+      if (j > 0 && j % 6 === 0) grouped += "-";
+      grouped += body.charAt(j);
+    }
+    return grouped;
+  }
+  /* 解析加密兑换码：签名、解码、长度、内校验任一失败返回 null。 */
+  function codeV2Decode(raw){
+    var s = String(raw || "").toUpperCase().replace(/[\s　]+/g, "").replace(/－/g, "-");
+    if (s.indexOf("YY2") !== 0) return null;
+    var body = s.slice(3);
+    if (body.charAt(0) === "-") body = body.slice(1);
+    body = body.replace(/-/g, "");
+    if (body.length <= CODE_V2_SIG_LEN) return null;
+    var cipherText = body.slice(0, -CODE_V2_SIG_LEN);
+    var sig = body.slice(-CODE_V2_SIG_LEN);
+    if (codeV2Sign(cipherText) !== sig) return null;
+    var bytes = codeBase32Decode(cipherText);
+    if (!bytes || bytes.length < 2) return null;
+    var plainBytes = codeRc4Crypt(bytes, CODE_V2_SECRET);
+    var len = plainBytes[0];
+    if (len !== plainBytes.length - 1 || len < 20) return null;
+    var full = "";
+    for (var i=1;i<plainBytes.length;i++) full += String.fromCharCode(plainBytes[i]);
+    var parts = full.split("|");
+    if (parts.length !== 7) return null;
+    var kind = parts[0], exp = parts[1], usesStr = parts[2], rewardStr = parts[3], bind = parts[4], salt = parts[5], check = parts[6];
+    if (kind !== "B" && kind !== "U") return null;
+    if (!/^\d{8}$/.test(exp)) return null;
+    if (!/^\d{3}$/.test(usesStr)) return null;
+    var uses = parseInt(usesStr, 10);
+    if (uses < 1 || uses > 999) return null;
+    if (!/^[A-Z0-9]{6}$/.test(bind)) return null;
+    if (!/^[A-Z0-9]{6}$/.test(salt)) return null;
+    if (codeV2Checksum(parts.slice(0, 6).join("|")) !== check) return null;
+    var reward = codeParseReward(rewardStr);
+    if (!reward) return null;
+    return {kind:kind, exp:exp, uses:uses, reward:reward, bind:bind, salt:salt};
+  }
+  /* 兑换入口：只认 YY2- 加密兑换码，返回统一字段，tag 为绑定设备后缀（通用码为 000000）。 */
+  function parseCodeV2(raw){
+    var dec = codeV2Decode(raw);
+    if (!dec) return null;
+    var s = String(raw || "").toUpperCase().replace(/[\s　]+/g, "").replace(/－/g, "-");
+    var body = s.slice(3).replace(/-/g, "");
+    var grouped = "YY2-";
+    for (var i=0;i<body.length;i++){
+      if (i > 0 && i % 6 === 0) grouped += "-";
+      grouped += body.charAt(i);
+    }
+    return {code: grouped, kind: dec.kind, reward: dec.reward, exp: dec.exp, uses: dec.uses, tag: dec.bind};
+  }
+  function parseCode(raw){
+    return parseCodeV2(raw);
+  }
+  function deviceFingerprint(){
+    var s = [navigator.userAgent||"", navigator.platform||"", navigator.language||"", (screen.width||0)+"x"+(screen.height||0), new Date().getTimezoneOffset(), navigator.hardwareConcurrency||0, navigator.deviceMemory||0].join("|");
+    return "DEV-" + hash6(s + "|sheep") ;
+  }
+  var DEVICE_CODE = deviceFingerprint();
+  function deviceSuffix(code){ return String(code||"").toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/^DEV/,"").slice(-6); }
+  /* ===== CODE-CORE END ===== */
+  /* ---------- 本机自动保存 ---------- */
+  /* 钱包 / 背包 / 签到 / 解锁 / 通关 / 已兑换记录：每次变化后写入
+     localStorage，打开页面时自动恢复。关掉页面再打开，通关进度、
+     羊毛币和背包都在。导出的存档文件功能保留，作为手动备份。 */
+  var AUTOSAVE_KEY = "yang-sheep-save-v1";
+  function persist(){
+    try{
+      var payload = {
+        v: 1, device: DEVICE_CODE, savedAt: new Date().toISOString(),
+        bag: bag, checkin: checkin, clearedLevels: clearedLevels,
+        wallet: wallet, unlockedMax: unlockedMax,
+        redeemedCodes: redeemedCodes, codeUses: codeUses,
+        acquireLog: acquireLogItems.slice(0, 6)
+      };
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
+    }catch(e){}
+  }
+  function loadProgress(){
+    try{
+      var raw = localStorage.getItem(AUTOSAVE_KEY);
+      if (!raw) return false;
+      var payload = JSON.parse(raw);
+      if (!payload || typeof payload !== "object") return false;
+      if (payload.bag && typeof payload.bag === "object"){
+        PROP_DEFS.forEach(function(pr){ bag[pr.key] = Math.max(0, Math.min(99, parseInt(payload.bag[pr.key], 10) || 0)); });
+      }
+      if (payload.checkin && typeof payload.checkin === "object"){
+        checkin = {last: payload.checkin.last || "", streak: parseInt(payload.checkin.streak, 10) || 0, total: parseInt(payload.checkin.total, 10) || 0};
+      }
+      if (payload.clearedLevels && typeof payload.clearedLevels === "object") clearedLevels = payload.clearedLevels;
+      if (payload.wallet && typeof payload.wallet === "object"){
+        wallet = {coins: Math.max(0, parseInt(payload.wallet.coins, 10) || 0), tickets: Math.max(0, parseInt(payload.wallet.tickets, 10) || 0)};
+      }
+      if (payload.unlockedMax) unlockedMax = Math.max(1, parseInt(payload.unlockedMax, 10) || 1);
+      else if (payload.clearedLevels){
+        var mc = 0;
+        Object.keys(payload.clearedLevels).forEach(function(k){ if (payload.clearedLevels[k]) mc = Math.max(mc, parseInt(k, 10) || 0); });
+        unlockedMax = Math.max(1, mc + 1);
+      }
+      if (payload.redeemedCodes && typeof payload.redeemedCodes === "object") redeemedCodes = payload.redeemedCodes;
+      if (payload.codeUses && typeof payload.codeUses === "object") codeUses = payload.codeUses;
+      if (payload.acquireLog && payload.acquireLog.length) acquireLogItems = payload.acquireLog;
+      clampBag();
+      return true;
+    }catch(e){ return false; }
+  }
+  window.addEventListener("pagehide", function(){ try{ persist(); }catch(e){} });
+  document.addEventListener("visibilitychange", function(){ if (document.hidden){ try{ persist(); }catch(e){} } });
+  function todayStr(d){
+    d = d || new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function dateNum(d){ return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate(); }
+  function clampBag(){
+    PROP_DEFS.forEach(function(p){ bag[p.key] = Math.max(0, Math.min(99, Math.floor(bag[p.key]||0))); });
+  }
+  function grantItems(items, source){
+    var parts = [];
+    PROP_DEFS.forEach(function(p){ var n = items[p.key]||0; if (n>0){ bag[p.key] = (bag[p.key]||0)+n; parts.push(p.name+"×"+n); } });
+    clampBag();
+    if (parts.length){
+      acquireLogItems.unshift({text: source+"："+parts.join("、")});
+      acquireLogItems = acquireLogItems.slice(0,6);
+    }
+    if (typeof renderBag === "function") renderBag();
+    if (typeof updateHUD === "function" && state) updateHUD();
+    return parts;
+  }
+
+  /* ---------- 禁止双击缩放（兜底） ---------- */
+  /* 现代浏览器靠 viewport + touch-action: manipulation 已足够；
+     下面这层只给不支持 touch-action 的旧浏览器用，避免误杀快速连点。 */
+  document.addEventListener("dblclick", function(e){ e.preventDefault(); }, {passive:false});
+  document.addEventListener("gesturestart", function(e){ e.preventDefault(); });
+  if (!window.CSS || !CSS.supports || !CSS.supports("touch-action", "manipulation")){
+    var lastTouchEndTime = 0, lastTouchEndX = 0, lastTouchEndY = 0;
+    document.addEventListener("touchend", function(e){
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      var now = Date.now();
+      var dx = t.clientX - lastTouchEndX, dy = t.clientY - lastTouchEndY;
+      if (now - lastTouchEndTime < 350 && dx * dx + dy * dy < 1600){
+        e.preventDefault();
+      }
+      lastTouchEndTime = now; lastTouchEndX = t.clientX; lastTouchEndY = t.clientY;
+    }, {passive:false});
+  }
+
+  function $(id){ return document.getElementById(id); }
+  function shuffle(arr){
+    for (var i = arr.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+  function fmt(sec){
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+  }
+  function showToast(msg, kind){
+    toastEl.textContent = msg;
+    toastEl.classList.toggle("error", kind === "error");
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove("show"); }, kind === "error" ? 2800 : 1800);
+  }
+  /* 弹窗内提示：失败信息直接显示在弹窗顶部，不走底部全局 toast，避免被遮挡。 */
+  var panelNoticeTimer = null;
+  function showPanelNotice(id, msg){
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(panelNoticeTimer);
+    panelNoticeTimer = setTimeout(function(){ el.classList.remove("show"); }, 3200);
+  }
+  function hidePanelNotice(id){
+    var el = document.getElementById(id);
+    if (el) el.classList.remove("show");
+  }
+  /* ---------- sound ---------- */
+  function tone(freq, dur, delay, type){
+    if (!soundOn) return;
+    try{
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var t0 = audioCtx.currentTime + (delay || 0);
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type || "sine"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.16, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + dur + 0.05);
+    }catch(e){}
+  }
+  function playSound(name){
+    if (name === "pick") tone(660, 0.09, 0, "triangle");
+    else if (name === "match"){ tone(523, .12, 0); tone(659, .12, .08); tone(784, .18, .16); }
+    else if (name === "bad") tone(220, .18, 0, "sawtooth");
+    /* 失败音：两声低沉的“噔、噔”，和点击/成功音明显区分；tone() 内部已按静音开关静默。 */
+    else if (name === "fail" || name === "error"){ tone(196, .22, 0, "sawtooth"); tone(147, .32, .2, "sawtooth"); }
+    else if (name === "win"){ [523,659,784,1047,784,1047].forEach(function(f,i){ tone(f, .22, i*.13, "triangle"); }); }
+    else if (name === "lose"){ [392,330,262,196].forEach(function(f,i){ tone(f, .25, i*.16, "triangle"); }); }
+  }
+  /* ---------- layout ---------- */
+  function buildTiles(level){
+    var cfg = getLevelConfig(level), tiles = [], id = 0;
+    cfg.layers.forEach(function(L, li){
+      for (var r = 0; r < L.rows; r++){
+        for (var c = 0; c < L.cols; c++){
+          tiles.push({id:id++, layer:li, gx:L.ox + c, gy:L.oy + r, type:null, removed:false, el:null});
+        }
+      }
+    });
+    return tiles;
+  }
+  function assignTypes(tiles, types){
+    var total = tiles.length, triples = total / 3;
+    var best = null, bestScore = -1;
+    for (var attempt = 0; attempt < 60; attempt++){
+      var pool = [];
+      for (var i = 0; i < triples; i++) pool.push(types[i % types.length].id);
+      shuffle(pool);
+      var seq = [];
+      pool.forEach(function(t){ seq.push(t,t,t); });
+      var order = tiles.slice();
+      shuffle(order);
+      order.forEach(function(tile, idx){ tile.type = seq[idx]; });
+      var score = openingScore(tiles);
+      if (score > bestScore){ bestScore = score; best = order.map(function(t){ return t.type; }); }
+      if (score >= 3) break;
+    }
+    tiles.forEach(function(tile, idx){ tile.type = best[idx]; });
+  }
+  /* 按层内三张一组发牌：同一层内的牌互不遮挡，先清完上层、
+     本层即可按组消除，不会出现跨层凑组被卡住的情况，故有解。
+     仅用于每层牌数都是 3 的倍数的程序化关卡（第 3 关起）。 */
+  function assignTypesLayered(tiles, types){
+    var byLayer = {};
+    tiles.forEach(function(t){ (byLayer[t.layer] = byLayer[t.layer] || []).push(t); });
+    Object.keys(byLayer).forEach(function(k){
+      var group = byLayer[k];
+      shuffle(group);
+      var triples = group.length / 3, seq = [];
+      for (var i = 0; i < triples; i++) seq.push(types[i % types.length].id);
+      shuffle(seq);
+      group.forEach(function(t, idx){ t.type = seq[Math.floor(idx / 3)]; });
+    });
+  }
+  function openingScore(tiles){
+    var counts = {};
+    tiles.forEach(function(t){
+      if (!isCovered(t, tiles)) counts[t.type] = (counts[t.type] || 0) + 1;
+    });
+    var s = 0;
+    Object.keys(counts).forEach(function(k){ if (counts[k] >= 3) s += counts[k]; else if (counts[k] === 2) s += 1; });
+    return s;
+  }
+  function isCovered(tile, tiles){
+    for (var i = 0; i < tiles.length; i++){
+      var o = tiles[i];
+      if (o === tile || o.removed || o.layer <= tile.layer) continue;
+      if (Math.abs(o.gx - tile.gx) < 0.9 && Math.abs(o.gy - tile.gy) < 0.9) return true;
+    }
+    return false;
+  }
+  function typeOf(id){
+    for (var i = 0; i < TYPES_ALL.length; i++) if (TYPES_ALL[i].id === id) return TYPES_ALL[i];
+    return TYPES_ALL[0];
+  }
+  function slotCapacity(){
+    return 7 + (state ? (state.extraSlots || 0) : 0);
+  }
+  function hasProgress(){
+    if (!state || state.over) return false;
+    if (state.moves > 0 || state.slots.length > 0 || state.holding.length > 0) return true;
+    for (var i = 0; i < state.tiles.length; i++) if (state.tiles[i].removed) return true;
+    return false;
+  }
+  function disarm(){
+    armedKey = null;
+    if (armedTimer){ clearTimeout(armedTimer); armedTimer = null; }
+    document.querySelectorAll(".prop.armed, .level-btn.armed, .icon-btn.armed").forEach(function(b){ b.classList.remove("armed"); });
+  }
+  /* 第一次点：武装并提示；第二次点（2.5 秒内）：真的执行。返回 true 表示已执行。 */
+  function armOrRun(key, btn, tip, run){
+    if (armedKey === key){
+      disarm();
+      run();
+      return true;
+    }
+    disarm();
+    armedKey = key;
+    if (btn) btn.classList.add("armed");
+    showToast(tip);
+    armedTimer = setTimeout(disarm, 4000);
+    return false;
+  }
+  /* ---------- game state ---------- */
+  function startGame(level){
+    /* 唯一重置入口：只从显式用户操作调用（关卡按钮二次确认、重开二次
+       确认、结算按钮、初始加载）。游玩中的点牌/道具/resize/计时都不会走到这里。 */
+    if (level > 1 && !canEnterLevel(level)){
+      showToast("先通关第 " + (level - 1) + " 关，才能解锁这一关");
+      return;
+    }
+    stopTimer();
+    if (peekTimer){ clearTimeout(peekTimer); peekTimer = null; }
+    disarm();
+    overlayBusy = false;
+    document.body.classList.remove("overlay-open");
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    var cfg = getLevelConfig(level);
+    var tiles = buildTiles(level);
+    if (level >= 3) assignTypesLayered(tiles, cfg.types); else assignTypes(tiles, cfg.types);
+    state = {
+      level: level, tiles: tiles, total: tiles.length,
+      slots: [], holding: [],
+      score: 0, moves: 0, groups: 0, elapsed: 0, extraSlots: 0, hammerMode: false,
+      props: bag, /* 道具背包跨局共享：开局不再按关卡刷新数量，用多少扣多少 */
+      history: [], over: false, boardW: 0, boardH: 0
+    };
+    state.boardW = Math.max.apply(null, cfg.layers.map(function(L){ return L.ox + L.cols; }));
+    state.boardH = Math.max.apply(null, cfg.layers.map(function(L){ return L.oy + L.rows; }));
+    $("levelLabel").textContent = getLevelConfig(level).name;
+    $("btnPrevLevel").disabled = level <= 1;
+    overlayEl.classList.remove("show");
+    var reviveBtn0 = $("overlayRevive");
+    if (reviveBtn0) reviveBtn0.classList.add("hidden");
+    boardEl.classList.remove("peeking", "hammer-mode");
+    busy = false;
+    renderBoard();
+    renderSlots();
+    renderHolding();
+    updateHUD();
+    fitBoard();
+    timerId = setInterval(function(){
+      if (state && !state.over){ state.elapsed++; $("timer").textContent = fmt(state.elapsed); }
+    }, 1000);
+  }
+  function stopTimer(){ if (timerId){ clearInterval(timerId); timerId = null; } }
+
+  function createTileEl(tile, covered){
+    var isDiv = covered || tile.removed;
+    var el = document.createElement(isDiv ? "div" : "button");
+    el.className = "tile t-" + tile.type + (covered ? " covered" : "") + (tile.removed ? " removed" : "");
+    el.style.left = (tile.gx * TILE_STEP + 2) + "px";
+    el.style.top = (tile.gy * TILE_STEP + 2) + "px";
+    el.style.zIndex = (tile.layer * 10 + 1);
+    if (isDiv){
+      el.setAttribute("role", "img");
+      el.setAttribute("aria-label", typeOf(tile.type).name + (covered ? "（被压住）" : ""));
+    } else {
+      el.type = "button";
+      el.setAttribute("aria-label", typeOf(tile.type).name);
+      el.addEventListener("click", function(){ onTileClick(tile); });
+    }
+    var g = document.createElement("img");
+    g.className = "face";
+    g.src = typeOf(tile.type).img;
+    g.alt = "";
+    g.draggable = false;
+    el.appendChild(g);
+    return el;
+  }
+  function renderBoard(){
+    boardEl.innerHTML = "";
+    boardEl.style.width = (state.boardW * TILE_STEP) + "px";
+    boardEl.style.height = (state.boardH * TILE_STEP) + "px";
+    state.tiles.forEach(function(tile){
+      tile.el = createTileEl(tile, isCovered(tile, state.tiles) && !tile.removed);
+      boardEl.appendChild(tile.el);
+    });
+    updateCovered();
+  }
+  function updateCovered(){
+    state.tiles.forEach(function(tile){
+      if (!tile.el) return;
+      var covered = !tile.removed && isCovered(tile, state.tiles);
+      var wantDiv = covered || tile.removed;
+      var isDiv = tile.el.tagName === "DIV";
+      if (wantDiv !== isDiv){
+        var fresh = createTileEl(tile, covered);
+        if (tile.el.classList.contains("hint-pulse")) fresh.classList.add("hint-pulse");
+        boardEl.replaceChild(fresh, tile.el);
+        tile.el = fresh;
+        return;
+      }
+      tile.el.classList.toggle("covered", covered);
+      tile.el.classList.toggle("removed", tile.removed);
+    });
+  }
+  function renderSlots(popTileId){
+    slotsEl.innerHTML = "";
+    slotsEl.style.gridTemplateColumns = "repeat(" + slotCapacity() + ",1fr)";
+    for (var i = 0; i < slotCapacity(); i++){
+      var cell = document.createElement("div");
+      cell.className = "slot";
+      var tile = state.slots[i];
+      if (tile){
+        var mini = document.createElement("div");
+        mini.className = "mini t-" + tile.type;
+        var mi = document.createElement("img");
+        mi.src = typeOf(tile.type).img;
+        mi.alt = typeOf(tile.type).name;
+        mi.draggable = false;
+        mini.appendChild(mi);
+        if (tile.id === popTileId) mini.style.animation = "drop .22s ease";
+        cell.appendChild(mini);
+      }
+      slotsEl.appendChild(cell);
+    }
+  }
+  function renderHolding(){
+    holdEl.innerHTML = "";
+    for (var i = 0; i < 3; i++){
+      var cell = document.createElement("div");
+      cell.className = "slot";
+      (function(tile){
+        if (tile){
+          var mini = document.createElement("div");
+          mini.className = "mini t-" + tile.type;
+          var mi = document.createElement("img");
+          mi.src = typeOf(tile.type).img;
+          mi.alt = typeOf(tile.type).name;
+          mi.draggable = false;
+          mini.appendChild(mi);
+          mini.title = "点一下放回槽位";
+          mini.addEventListener("click", function(){ returnFromHolding(tile); });
+          cell.appendChild(mini);
+        }
+      })(state.holding[i]);
+      holdEl.appendChild(cell);
+    }
+  }
+  function updateHUD(){
+    var remain = state.tiles.filter(function(t){ return !t.removed; }).length;
+    $("remain").textContent = remain;
+    $("groups").textContent = state.groups;
+    $("moves").textContent = state.moves;
+    $("score").textContent = state.score;
+    $("timer").textContent = fmt(state.elapsed);
+    var cleared = state.total - remain - state.slots.length - state.holding.length;
+    var pct = state.total ? Math.round(cleared / state.total * 100) : 0;
+    $("progressBar").style.width = pct + "%";
+    $("progressText").textContent = "消除进度 " + pct + "%";
+    $("undoCount").textContent = state.props.undo;
+    $("shuffleCount").textContent = state.props.shuffle;
+    $("removeCount").textContent = state.props.remove;
+    $("hintCount").textContent = state.props.hint;
+    $("peekCount").textContent = state.props.peek;
+    $("hammerCount").textContent = state.props.hammer;
+    $("extraCount").textContent = state.props.extra;
+    $("wandCount").textContent = state.props.wand;
+    $("scissors10Count").textContent = state.props.scissors10 || 0;
+    $("scissors20Count").textContent = state.props.scissors20 || 0;
+    $("passCount").textContent = state.props.pass || 0;
+    $("capacityNote").textContent = "槽位满 " + slotCapacity() + " 张即失败";
+    $("propUndo").disabled = state.props.undo <= 0 || state.history.length === 0;
+    $("propShuffle").disabled = state.props.shuffle <= 0;
+    $("propRemove").disabled = state.props.remove <= 0 || state.slots.length === 0 || state.holding.length >= 3;
+    $("propHint").disabled = state.props.hint <= 0;
+    $("propPeek").disabled = state.props.peek <= 0;
+    $("propHammer").disabled = state.props.hammer <= 0 && !state.hammerMode;
+    $("propExtra").disabled = state.props.extra <= 0;
+    $("propWand").disabled = state.props.wand <= 0;
+    $("propScissors10").disabled = (state.props.scissors10 || 0) <= 0;
+    $("propScissors20").disabled = (state.props.scissors20 || 0) <= 0;
+    $("propPass").disabled = (state.props.pass || 0) <= 0 || tempUnlockAll;
+    $("propPass").classList.toggle("active", tempUnlockAll);
+    $("propHammer").classList.toggle("active", !!state.hammerMode);
+    renderLevelNav();
+    renderBag();
+  }
+  function snapshot(){
+    return {
+      level: state.level,
+      slots: state.slots.map(function(t){ return t.id; }),
+      holding: state.holding.map(function(t){ return t.id; }),
+      removed: state.tiles.filter(function(t){ return t.removed; }).map(function(t){ return t.id; }),
+      types: state.tiles.map(function(t){ return t.type; }),
+      score: state.score, moves: state.moves, groups: state.groups
+    };
+  }
+  function restore(snap){
+    /* 只恢复牌面/槽位/分数。level、道具次数、加槽数是本局属性，
+       撤回一步绝不能把它们改回去，更不能把关卡重置。 */
+    var byId = {};
+    state.tiles.forEach(function(t){ byId[t.id] = t; });
+    state.slots = snap.slots.map(function(id){ return byId[id]; });
+    state.holding = snap.holding.map(function(id){ return byId[id]; });
+    var removedSet = {};
+    snap.removed.forEach(function(id){ removedSet[id] = true; });
+    state.tiles.forEach(function(t, i){
+      t.removed = !!removedSet[t.id];
+      t.type = snap.types[i];
+      if (t.el){
+        t.el.className = "tile t-" + t.type;
+        var g = t.el.querySelector("img.face");
+        if (g) g.src = typeOf(t.type).img;
+        t.el.setAttribute("aria-label", typeOf(t.type).name);
+      }
+    });
+    state.score = snap.score; state.moves = snap.moves; state.groups = snap.groups;
+  }
+  function floatScore(text){
+    var el = document.createElement("div");
+    el.className = "float-score";
+    el.textContent = text;
+    slotbarEl.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 950);
+  }
+  /* ---------- moves ---------- */
+  function onTileClick(tile){
+    if (!state || state.over || busy) return;
+    if (tile.removed) return;
+    if (isCovered(tile, state.tiles)){
+      if (tile.el){ tile.el.classList.remove("shake"); void tile.el.offsetWidth; tile.el.classList.add("shake"); }
+      showToast("这张牌被压住了，先拿开上面的牌");
+      tone(180, .08, 0, "square");
+      return;
+    }
+    /* 小锤模式：直接敲掉一张露在外面的牌，不占槽位，撤回可恢复 */
+    if (state.hammerMode){
+      state.history.push(snapshot());
+      state.hammerMode = false;
+      boardEl.classList.remove("hammer-mode");
+      tile.removed = true;
+      state.moves++;
+      state.score += 10;
+      playSound("match");
+      floatScore("+10");
+      renderSlots();
+      updateCovered();
+      updateHUD();
+      checkEnd();
+      return;
+    }
+    if (state.slots.length >= slotCapacity()){
+      showToast("槽位满了");
+      return;
+    }
+    state.history.push(snapshot());
+    tile.removed = true;
+    state.slots.push(tile);
+    state.moves++;
+    playSound("pick");
+    renderSlots(tile.id);
+    updateCovered();
+    updateHUD();
+    checkTriple();
+  }
+  function checkTriple(){
+    var counts = {};
+    state.slots.forEach(function(t){ counts[t.type] = (counts[t.type] || 0) + 1; });
+    var matchType = null;
+    Object.keys(counts).forEach(function(k){ if (counts[k] >= 3) matchType = k; });
+    if (matchType){
+      busy = true;
+      var matched = state.slots.filter(function(t){ return t.type === matchType; }).slice(0, 3);
+      var matchedIds = {};
+      matched.forEach(function(t){ matchedIds[t.id] = true; });
+      slotsEl.querySelectorAll(".slot").forEach(function(cell, idx){
+        var t = state.slots[idx];
+        if (t && matchedIds[t.id]){
+          var mini = cell.querySelector(".mini");
+          if (mini) mini.classList.add("pop");
+        }
+      });
+      setTimeout(function(){
+        state.slots = state.slots.filter(function(t){ return !matchedIds[t.id]; });
+        state.groups++;
+        var bonus = state.slots.length === 0 ? 20 : 0;
+        state.score += 30 + bonus;
+        playSound("match");
+        floatScore("+" + (30 + bonus) + (bonus ? "  槽位清空！" : ""));
+        busy = false;
+        renderSlots();
+        updateHUD();
+        checkEnd();
+      }, 240);
+      return;
+    }
+    checkEnd();
+  }
+  function checkEnd(){
+    if (!state || state.over) return;
+    var remain = state.tiles.filter(function(t){ return !t.removed; }).length;
+    if (remain === 0 && state.slots.length === 0 && state.holding.length === 0){
+      endGame(true);
+    } else if (remain === 0 && state.slots.length > 0){
+      endGame(false, "牌堆已经空了，槽位里的牌凑不成三张。");
+    } else if (state.slots.length >= slotCapacity()){
+      slotbarEl.classList.remove("full"); void slotbarEl.offsetWidth; slotbarEl.classList.add("full");
+      endGame(false, "槽位放满 " + slotCapacity() + " 张牌，还没有凑齐三张相同的。");
+    }
+  }
+  /* ---------- props ---------- */
+  function doUndo(){
+    if (!state || state.over || busy) return;
+    if (state.props.undo <= 0){ showToast("撤回次数用完啦"); return; }
+    if (state.history.length === 0){ showToast("没有可以撤回的上一步"); return; }
+    state.props.undo--;
+    var snap = state.history.pop();
+    restore(snap);
+    renderSlots();
+    renderHolding();
+    updateCovered();
+    updateHUD();
+    playSound("pick");
+    showToast("已撤回上一步");
+  }
+  function doShuffle(){
+    if (!state || state.over || busy) return;
+    if (state.props.shuffle <= 0){ showToast("洗牌次数用完啦"); return; }
+    var rest = state.tiles.filter(function(t){ return !t.removed; });
+    if (rest.length < 3){ showToast("剩下的牌太少，不用洗牌"); return; }
+    state.props.shuffle--;
+    var types = rest.map(function(t){ return t.type; });
+    shuffle(types);
+    rest.forEach(function(t, i){
+      t.type = types[i];
+      if (t.el){
+        t.el.className = "tile t-" + t.type + (t.el.classList.contains("covered") ? " covered" : "");
+        var g = t.el.querySelector("img.face");
+        if (g) g.src = typeOf(t.type).img;
+      }
+    });
+    updateCovered();
+    updateHUD();
+    playSound("match");
+    showToast("剩余的牌已经打乱，看看有没有新机会");
+  }
+  function doRemove(){
+    if (!state || state.over || busy) return;
+    if (state.props.remove <= 0){ showToast("移出次数用完啦"); return; }
+    if (state.slots.length === 0){ showToast("槽位是空的，不用移出"); return; }
+    if (state.holding.length >= 3){ showToast("暂存区已经满了"); return; }
+    state.history.push(snapshot());
+    state.props.remove--;
+    var n = Math.min(3, state.slots.length, 3 - state.holding.length);
+    var moved = state.slots.splice(0, n);
+    state.holding = state.holding.concat(moved);
+    renderSlots();
+    renderHolding();
+    updateHUD();
+    playSound("pick");
+    showToast("已移出 " + n + " 张牌到暂存区");
+  }
+  function returnFromHolding(tile){
+    if (!state || state.over || busy) return;
+    if (state.slots.length >= slotCapacity()){ showToast("槽位满了，先消除一些再放回"); return; }
+    state.history.push(snapshot());
+    state.holding = state.holding.filter(function(t){ return t !== tile; });
+    state.slots.push(tile);
+    renderSlots(tile.id);
+    renderHolding();
+    updateHUD();
+    playSound("pick");
+    checkTriple();
+  }
+  function doHint(){
+    if (!state || state.over || busy) return;
+    if (state.props.hint <= 0){ showToast("提示次数用完啦"); return; }
+    var avail = state.tiles.filter(function(t){ return !t.removed && !isCovered(t, state.tiles); });
+    var counts = {};
+    avail.forEach(function(t){ counts[t.type] = (counts[t.type] || 0) + 1; });
+    var bestType = null, bestN = 0;
+    Object.keys(counts).forEach(function(k){ if (counts[k] > bestN){ bestN = counts[k]; bestType = k; } });
+    if (!bestType || bestN < 2){
+      showToast("外面没有能配对的牌，先拿掉一些牌或用洗牌");
+      return;
+    }
+    state.props.hint--;
+    var targets = avail.filter(function(t){ return t.type === bestType; }).slice(0, 3);
+    targets.forEach(function(t){ if (t.el) t.el.classList.add("hint-pulse"); });
+    setTimeout(function(){
+      targets.forEach(function(t){ if (t.el) t.el.classList.remove("hint-pulse"); });
+    }, 1800);
+    updateHUD();
+    showToast("发光的 " + typeOf(bestType).name + " 可以配对（" + targets.length + " 张露在外面）");
+  }
+  /* ---------- 道具（透视 / 小锤 / 加槽 / 魔法棒） ---------- */
+  function doPeek(){
+    if (!state || state.over || busy) return;
+    if (state.props.peek <= 0){ showToast("透视次数用完啦"); return; }
+    state.props.peek--;
+    if (peekTimer) clearTimeout(peekTimer);
+    boardEl.classList.add("peeking");
+    updateHUD();
+    showToast("透视 4 秒：被压住的牌都亮起来啦，记住下面的表情");
+    peekTimer = setTimeout(function(){
+      peekTimer = null;
+      boardEl.classList.remove("peeking");
+    }, 4000);
+  }
+  function doHammer(){
+    if (!state || state.over || busy) return;
+    if (state.hammerMode){
+      state.hammerMode = false;
+      boardEl.classList.remove("hammer-mode");
+      updateHUD();
+      showToast("已取消小锤");
+      return;
+    }
+    if (state.props.hammer <= 0){ showToast("小锤次数用完啦"); return; }
+    state.props.hammer--;
+    state.hammerMode = true;
+    boardEl.classList.add("hammer-mode");
+    updateHUD();
+    showToast("点一张露在外面的牌，直接敲掉它，不占槽位");
+  }
+  function doExtra(){
+    if (!state || state.over || busy) return;
+    if (state.props.extra <= 0){ showToast("加槽次数用完啦"); return; }
+    state.props.extra--;
+    state.extraSlots++;
+    renderSlots();
+    updateHUD();
+    playSound("match");
+    showToast("本局多了一个槽位，现在最多放 " + slotCapacity() + " 张");
+  }
+  function doWand(){
+    if (!state || state.over || busy) return;
+    if (state.props.wand <= 0){ showToast("魔法棒次数用完啦"); return; }
+    var avail = state.tiles.filter(function(t){ return !t.removed && !isCovered(t, state.tiles); });
+    var counts = {};
+    avail.forEach(function(t){ counts[t.type] = (counts[t.type] || 0) + 1; });
+    var inSlot = {};
+    state.slots.forEach(function(t){ inSlot[t.type] = true; });
+    var bestType = null, bestN = 0;
+    Object.keys(counts).forEach(function(k){
+      var n = counts[k];
+      if (n >= 3 && (n > bestN || (n === bestN && inSlot[k] && !inSlot[bestType]))) { bestN = n; bestType = k; }
+    });
+    if (!bestType){
+      showToast("外面凑不够三张相同的，先拿掉一些牌或用洗牌");
+      return;
+    }
+    state.props.wand--;
+    state.history.push(snapshot());
+    var targets = avail.filter(function(t){ return t.type === bestType; }).slice(0, 3);
+    busy = true;
+    targets.forEach(function(t){ if (t.el) t.el.classList.add("hint-pulse"); });
+    setTimeout(function(){
+      targets.forEach(function(t){ t.removed = true; });
+      state.groups++;
+      state.score += 30;
+      playSound("match");
+      floatScore("+30  魔法棒消掉了 " + typeOf(bestType).name);
+      busy = false;
+      renderSlots();
+      updateCovered();
+      updateHUD();
+      checkEnd();
+    }, 280);
+  }
+  /* ---------- 复活币：只在失败结算时用，效果等于撤回一次 ---------- */
+  function updateReviveButton(){
+    var btn = $("overlayRevive");
+    if (!btn || !state) return;
+    var n = bag.revive || 0;
+    btn.classList.toggle("hidden", !state.over || !!state.won);
+    btn.disabled = n <= 0;
+    btn.textContent = n > 0 ? "使用复活币复活（拥有 " + n + " 个）" : "复活币不足，去商城购买";
+  }
+  function doRevive(){
+    if (!state || !state.over || state.won) return;
+    if ((bag.revive || 0) <= 0){ playSound("fail"); showToast("没有复活币，去商城购买吧"); return; }
+    if (state.history.length === 0 && state.slots.length === 0){ showToast("没有可以退回的上一步"); return; }
+    bag.revive--;
+    if (state.history.length > 0){
+      /* 与撤回同一条快照逻辑：退回上一步（最后放入槽位的那张牌回到牌桌；
+         上一步若触发过消除，快照会把分数/组数/槽位一并退回可继续的状态）。 */
+      var snap = state.history.pop();
+      restore(snap);
+    } else {
+      var tile = state.slots.pop();
+      if (tile) tile.removed = false;
+    }
+    state.over = false;
+    state.won = false;
+    busy = false;
+    overlayBusy = false;
+    state.hammerMode = false;
+    boardEl.classList.remove("hammer-mode", "peeking");
+    if (peekTimer){ clearTimeout(peekTimer); peekTimer = null; }
+    document.body.classList.remove("overlay-open");
+    overlayEl.classList.remove("show");
+    var btn = $("overlayRevive");
+    if (btn) btn.classList.add("hidden");
+    renderSlots();
+    renderHolding();
+    updateCovered();
+    updateHUD();
+    renderBag();
+    stopTimer();
+    timerId = setInterval(function(){
+      if (state && !state.over){ state.elapsed++; $("timer").textContent = fmt(state.elapsed); }
+    }, 1000);
+    playSound("match");
+    showToast("已复活，继续加油！");
+  }
+  /* ---------- end ---------- */
+  function endGame(win, reason){
+    if (state.over) return;
+    state.over = true;
+    state.won = win;
+    var rewardText = "";
+    if (win){
+      var first = !clearedLevels[state.level];
+      if (!tempUnlockAll){
+        clearedLevels[state.level] = true;
+        if (state.level + 1 > unlockedMax) unlockedMax = state.level + 1;
+      }
+      var base = 30 + state.level * 5;
+      var coins = first ? base : Math.floor(base / 2);
+      wallet.coins += coins;
+      acquireLogItems.unshift({text: (first ? "首次通关" : "再次通关") + "第 " + state.level + "关：+" + coins + " 羊毛币"});
+      acquireLogItems = acquireLogItems.slice(0, 6);
+      rewardText = "本次获得 " + coins + " 羊毛币" + (first && !tempUnlockAll ? "，已解锁第 " + (state.level + 1) + " 关" : "");
+    }
+    renderBag();
+    state.hammerMode = false;
+    boardEl.classList.remove("hammer-mode", "peeking");
+    if (peekTimer){ clearTimeout(peekTimer); peekTimer = null; }
+    document.body.classList.add("overlay-open");
+    stopTimer();
+    if (win) playSound("win"); else playSound("lose");
+    $("overlayTitle").textContent = win ? (state.level === 1 ? "第一关通过！" : "第 " + state.level + " 关通过！") : "差一点点…";
+    $("overlayText").textContent = win
+      ? (state.level === 1 ? "第一关顺利过关，第二关的牌堆更高、牌更多，敢来挑战吗？" : "全部牌都消除干净了！第 " + (state.level + 1) + " 关的牌堆更大、更难，敢来挑战吗？")
+      : (reason || "再试一次吧。");
+    $("overlayReward").textContent = rewardText;
+    $("finalScore").textContent = state.score;
+    $("finalTime").textContent = fmt(state.elapsed);
+    $("finalGroups").textContent = state.groups + " 组";
+    var mainBtn = $("overlayMain"), subBtn = $("overlaySub");
+    overlayMainTarget = win ? state.level + 1 : state.level;
+    overlaySubTarget = win ? state.level : 1;
+    mainBtn.textContent = win ? "挑战第 " + (state.level + 1) + " 关" : "再来一局";
+    subBtn.textContent = win ? "再玩第 " + state.level + " 关" : "回第一关";
+    subBtn.style.display = win || state.level > 1 ? "" : "none";
+    updateReviveButton();
+    overlayEl.classList.add("show");
+    if (win) confetti();
+  }
+  function confetti(){
+    var colors = ["#ff9f1c","#3f9e4d","#ff5d8f","#4dabf7","#ffd43b","#9775fa"];
+    for (var i = 0; i < 46; i++){
+      var d = document.createElement("div");
+      d.className = "confetti";
+      d.style.left = (Math.random() * 100) + "vw";
+      d.style.background = colors[i % colors.length];
+      d.style.animationDuration = (1.6 + Math.random() * 1.6) + "s";
+      d.style.animationDelay = (Math.random() * 0.5) + "s";
+      d.style.transform = "rotate(" + (Math.random() * 360) + "deg)";
+      document.body.appendChild(d);
+      (function(el){ setTimeout(function(){ el.remove(); }, 3800); })(d);
+    }
+  }
+  /* ---------- sizing ---------- */
+  /* 尺寸变化只调牌堆缩放，绝不重新开局、不碰关卡和进度。 */
+  function fitBoard(){
+    if (!state) return;
+    var pxW = state.boardW * TILE_STEP + 4;
+    var pxH = state.boardH * TILE_STEP + 4;
+    var avail = boardWrap.clientWidth || 0;
+    if (avail <= 0 || pxW <= 0) return;
+    var scale = Math.min(1, avail / pxW);
+    /* 牌多、层高的后期关卡：再按剩余视口高度缩小，让牌桌尽量一屏放下。
+       预留高度已随槽位区/道具区压紧而调小（200），牌桌是页面最大区块。 */
+    try{
+      var top = boardWrap.getBoundingClientRect().top;
+      var availH = Math.max(260, (window.innerHeight || 700) - top - 200);
+      if (pxH * scale > availH) scale = Math.max(0.5, availH / pxH);
+    }catch(e){}
+    boardEl.style.transform = "scale(" + scale + ")";
+    boardWrap.style.height = (pxH * scale) + "px";
+    boardEl.style.marginLeft = ((avail - pxW) / 2) + "px";
+  }
+  window.addEventListener("resize", fitBoard);
+
+  /* ---------- wiring ---------- */
+  boardEl.addEventListener("click", function(e){
+    var t = e.target.closest ? e.target.closest(".tile.covered") : null;
+    if (!t || !state || state.over) return;
+    t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake");
+    showToast("这张牌被压住了，先拿开上面的牌");
+    tone(180, .08, 0, "square");
+  });
+  /* ---------- 关卡 / 重开守门：只有主动二次确认才改变关卡 ---------- */
+  function requestLevelChange(level, btn){
+    if (!state) return;
+    if (overlayEl.classList.contains("show")) return; /* 结算遮罩下不接受顶栏点击 */
+    if (btn) btn.blur();
+    if (level > maxUnlocked()){
+      showToast("先通关第 " + (level - 1) + " 关，才能解锁这一关");
+      return;
+    }
+    if (hasProgress()){
+      armOrRun("level:" + level, btn, "再点一次切换到" + getLevelConfig(level).name + "，当前进度会丢失",
+        function(){ startGame(level); });
+    } else {
+      disarm();
+      startGame(level);
+    }
+  }
+  function onRestart(btn){
+    if (!state) return;
+    if (overlayEl.classList.contains("show")) return;
+    if (btn) btn.blur();
+    if (hasProgress()){
+      armOrRun("restart", btn, "再点一次重新开始本局，当前进度会丢失",
+        function(){ startGame(state.level); showToast("已重新开始本局"); });
+    } else {
+      disarm();
+      startGame(state.level);
+      showToast("已重新开始本局");
+    }
+  }
+  function showView(name){
+    var game = $("viewGame"), me = $("viewMe");
+    if (name === "me"){ game.classList.remove("show"); me.classList.add("show"); }
+    else { me.classList.remove("show"); game.classList.add("show"); }
+    window.scrollTo({top: 0, behavior: "auto"});
+    if (name !== "me") requestAnimationFrame(fitBoard);
+  }
+  $("btnPrevLevel").addEventListener("click", function(e){ e.stopPropagation(); if (state && state.level > 1) requestLevelChange(state.level - 1, this); });
+  $("btnNextLevel").addEventListener("click", function(e){ e.stopPropagation(); if (state) requestLevelChange(state.level + 1, this); });
+  $("meBtn").addEventListener("click", function(){ showView("me"); });
+  $("actCheckin").addEventListener("click", function(){ openSub("checkin"); });
+  $("actRedeem").addEventListener("click", function(){ openSub("redeem"); });
+  $("actLottery").addEventListener("click", function(){ openSub("lottery"); });
+  $("actShop").addEventListener("click", function(){ openSub("shop"); });
+  document.querySelectorAll(".sub-close, .sub-back").forEach(function(b){ b.addEventListener("click", closeSub); });
+  /* 子弹窗点遮罩空白处不关闭：只抖一下面板，提示用「返回」或「×」关闭。 */
+  $("subOverlay").addEventListener("click", function(e){
+    if (e.target === this){
+      var p = this.querySelector(".sub-panel:not(.hidden)");
+      if (p){ p.classList.remove("shake-sub"); void p.offsetWidth; p.classList.add("shake-sub"); }
+    }
+  });
+  $("backBtn").addEventListener("click", function(){ showView("game"); });
+  $("restartBtn").addEventListener("click", function(e){ e.stopPropagation(); onRestart(this); });
+  $("soundBtn").addEventListener("click", function(){
+    soundOn = !soundOn;
+    $("soundBtn").classList.toggle("muted", !soundOn);
+    if (soundOn) playSound("pick");
+  });
+  $("propUndo").addEventListener("click", doUndo);
+  $("propShuffle").addEventListener("click", doShuffle);
+  $("propRemove").addEventListener("click", doRemove);
+  $("propHint").addEventListener("click", doHint);
+  $("propPeek").addEventListener("click", doPeek);
+  $("propHammer").addEventListener("click", doHammer);
+  $("propExtra").addEventListener("click", doExtra);
+  $("propWand").addEventListener("click", doWand);
+  $("propScissors10").addEventListener("click", function(){ doScissors(10, "scissors10", "小剪刀"); });
+  $("propScissors20").addEventListener("click", function(){ doScissors(20, "scissors20", "大剪刀"); });
+  $("propPass").addEventListener("click", doPass);
+  $("lotteryBtn").addEventListener("click", doLottery);
+  var hubBtn = $("wheelHub");
+  if (hubBtn) hubBtn.addEventListener("click", doLottery);
+  var probBtn = $("probBtn");
+  if (probBtn) probBtn.addEventListener("click", function(){ var po = $("probOverlay"); if (po) po.classList.add("show"); });
+  var probClose = $("probClose");
+  if (probClose) probClose.addEventListener("click", function(){ var po = $("probOverlay"); if (po) po.classList.remove("show"); });
+  var probOv = $("probOverlay");
+  if (probOv) probOv.addEventListener("click", function(e){ if (e.target === this) this.classList.remove("show"); });
+  /* 结算按钮：遮罩没打开、或已点过一次，都不再响应；点一次即锁定，
+     防止快速连点/点透把“再来一局”变成别的关卡。 */
+  $("overlayRevive").addEventListener("click", function(e){
+    e.stopPropagation();
+    if (!overlayEl.classList.contains("show") || overlayBusy || !state) return;
+    this.blur();
+    doRevive();
+  });
+  $("overlayMain").addEventListener("click", function(e){
+    e.stopPropagation();
+    if (!overlayEl.classList.contains("show") || overlayBusy || !state) return;
+    overlayBusy = true;
+    this.blur();
+    startGame(overlayMainTarget);
+  });
+  $("overlaySub").addEventListener("click", function(e){
+    e.stopPropagation();
+    if (!overlayEl.classList.contains("show") || overlayBusy || !state) return;
+    overlayBusy = true;
+    this.blur();
+    startGame(overlaySubTarget);
+  });
+  document.addEventListener("pointerdown", function(){
+    try{
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }catch(e){}
+  }, {once:true});
+
+  /* ---------- 关卡解锁 / 剪刀道具 / 商城 / 抽奖 / 子弹窗 ---------- */
+  function maxUnlocked(){ return tempUnlockAll ? 999999 : unlockedMax; }
+  function canEnterLevel(level){ return level <= maxUnlocked(); }
+  function renderLevelNav(){
+    if (!state) return;
+    var nextLocked = (state.level + 1) > maxUnlocked();
+    var nb = $("btnNextLevel");
+    nb.classList.toggle("locked", nextLocked);
+    nb.textContent = nextLocked ? "🔒 下一关" : "下一关 ›";
+    var badge = $("tempBadge");
+    if (badge) badge.classList.toggle("hidden", !tempUnlockAll);
+  }
+  /* 剪刀：整组去掉能凑三张的组合。先取露在外面的组合，不足时取同一层内
+     的组合；按整组去除，剩余牌数仍是 3 的倍数，不破坏可解性。 */
+  function doScissors(n, key, label){
+    if (!state || state.over || busy) return;
+    if ((bag[key] || 0) <= 0){ showToast(label + "没有啦，去商城看看吧"); return; }
+    var groups = [], used = {};
+    var exposed = state.tiles.filter(function(t){ return !t.removed && !isCovered(t, state.tiles); });
+    var byType = {};
+    exposed.forEach(function(t){ (byType[t.type] = byType[t.type] || []).push(t); });
+    var types = Object.keys(byType).sort(function(a, b){ return byType[b].length - byType[a].length; });
+    types.forEach(function(tp){
+      var arr = byType[tp];
+      while (arr.length >= 3 && groups.length < n){
+        var g = arr.splice(0, 3);
+        g.forEach(function(t){ used[t.id] = true; });
+        groups.push(g);
+      }
+    });
+    if (groups.length < n){
+      var byLayer = {};
+      state.tiles.forEach(function(t){
+        if (t.removed || used[t.id]) return;
+        (byLayer[t.layer + "|" + t.type] = byLayer[t.layer + "|" + t.type] || []).push(t);
+      });
+      Object.keys(byLayer).forEach(function(k){
+        var arr = byLayer[k];
+        while (arr.length >= 3 && groups.length < n){
+          var g2 = arr.splice(0, 3);
+          g2.forEach(function(t){ used[t.id] = true; });
+          groups.push(g2);
+        }
+      });
+    }
+    if (groups.length === 0){ showToast("现在没有能整组去掉的组合"); return; }
+    bag[key]--;
+    state.history.push(snapshot());
+    groups.forEach(function(g){ g.forEach(function(t){ t.removed = true; }); });
+    state.groups += groups.length;
+    state.score += groups.length * 30;
+    state.moves++;
+    playSound("match");
+    floatScore("+" + (groups.length * 30) + "  " + label + "去掉了 " + groups.length + " 组");
+    renderSlots();
+    updateCovered();
+    updateHUD();
+    checkEnd();
+    if (groups.length < n) showToast(label + "去掉了 " + groups.length + " 组，剩下的凑不够整组了");
+  }
+  function doPass(){
+    if (!state || state.over || busy) return;
+    if (tempUnlockAll){ showToast("临时通行证正在生效中"); return; }
+    if ((bag.pass || 0) <= 0){ showToast("临时通行证没有啦，去商城看看吧"); return; }
+    bag.pass--;
+    tempUnlockAll = true;
+    renderBag();
+    updateHUD();
+    playSound("match");
+    showToast("临时通行证生效：本次可以进入任意关卡，通关不计入通关记录");
+  }
+  function shopIconHTML(key, def){
+    if (key === "ticket") return PROP_ICON_SVG.pass;
+    return propIconHTML(def);
+  }
+  function renderShop(){
+    var grid = $("shopGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    var items = SHOP_ITEMS.concat([{key:"ticket", price:10}]);
+    items.forEach(function(item){
+      var def = item.key === "ticket" ? {name:"抽奖券", desc:"抽奖 1 次"} : propDef(item.key);
+      var owned = item.key === "ticket" ? wallet.tickets : (bag[item.key] || 0);
+      var card = document.createElement("div");
+      card.className = "shop-item";
+      card.innerHTML = '<span class="si">' + shopIconHTML(item.key, def) + '</span><b>' + def.name + '</b><span class="sd">' + def.desc + '</span><span class="sp">' + item.price + ' 羊毛币</span><span class="so">已拥有 ' + owned + '</span>';
+      var btn = document.createElement("button");
+      btn.className = "btn small primary"; btn.type = "button"; btn.textContent = "购买";
+      btn.addEventListener("click", function(){ buyShopItem(item); });
+      card.appendChild(btn);
+      grid.appendChild(card);
+    });
+    var bal = $("shopBalance");
+    if (bal) bal.textContent = wallet.coins + " 羊毛币 · 抽奖券 " + wallet.tickets + " 张";
+  }
+  function buyShopItem(item){
+    if (wallet.coins < item.price){
+      playSound("fail");
+      showPanelNotice("shopNotice", "羊毛币不够，还差 " + (item.price - wallet.coins) + " 羊毛币，先去签到或过关赚一点吧");
+      showToast("羊毛币不够", "error");
+      return;
+    }
+    hidePanelNotice("shopNotice");
+    wallet.coins -= item.price;
+    if (item.key === "ticket"){
+      wallet.tickets++;
+      acquireLogItems.unshift({text: "商城购买：抽奖券×1"});
+      acquireLogItems = acquireLogItems.slice(0, 6);
+      showToast("购买成功：抽奖券 +1");
+    } else {
+      bag[item.key] = (bag[item.key] || 0) + 1;
+      clampBag();
+      acquireLogItems.unshift({text: "商城购买：" + propDef(item.key).name + "×1"});
+      acquireLogItems = acquireLogItems.slice(0, 6);
+      showToast("购买成功：" + propDef(item.key).name + " +1");
+    }
+    renderShop();
+    renderBag();
+    if (state) updateHUD();
+    playSound("match");
+  }
+  function renderLottery(){
+    if ($("lotteryBalance")) $("lotteryBalance").textContent = "羊毛币 " + wallet.coins + " · 抽奖券 " + wallet.tickets + " 张";
+    buildWheel();
+  }
+  function lotteryPick(){
+    var r = Math.random() * 100, acc = 0;
+    for (var i = 0; i < LOTTERY_PRIZES.length; i++){
+      acc += LOTTERY_PRIZES[i].p;
+      if (r < acc) return LOTTERY_PRIZES[i];
+    }
+    return LOTTERY_PRIZES[0];
+  }
+  function wheelPolar(r, deg){
+    var rad = deg * Math.PI / 180;
+    return [r * Math.sin(rad), -r * Math.cos(rad)];
+  }
+  function buildWheel(){
+    var svg = $("wheelSvg");
+    if (!svg || wheelBuilt) return;
+    var seg = 360 / LOTTERY_PRIZES.length, parts = [];
+    parts.push('<circle cx="0" cy="0" r="102" fill="#fffdf4" />');
+    LOTTERY_PRIZES.forEach(function(pr, i){
+      var a0 = i * seg, a1 = (i + 1) * seg;
+      var p0 = wheelPolar(100, a0), p1 = wheelPolar(100, a1);
+      parts.push('<path d="M0 0 L' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) + ' A100 100 0 0 1 ' + p1[0].toFixed(2) + ' ' + p1[1].toFixed(2) + ' Z" fill="' + WHEEL_COLORS[i % WHEEL_COLORS.length] + '" stroke="#fffdf4" stroke-width="2" />');
+      var mid = a0 + seg / 2;
+      var fill = (WHEEL_COLORS[i % WHEEL_COLORS.length] === '#ffd43b') ? '#5a3d00' : '#ffffff';
+      /* 两行小字：数字一行、“羊毛币”一行，避免长文字溢出扇区互相遮挡。 */
+      parts.push('<text x="0" y="-71" transform="rotate(' + mid + ')" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="900" fill="' + fill + '" style="paint-order:stroke;stroke:rgba(0,0,0,.18);stroke-width:2px">' + pr.coins + '</text>');
+      parts.push('<text x="0" y="-58" transform="rotate(' + mid + ')" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="700" fill="' + fill + '" style="paint-order:stroke;stroke:rgba(0,0,0,.18);stroke-width:2px">羊毛币</text>');
+    });
+    parts.push('<circle cx="0" cy="0" r="100" fill="none" stroke="#ffffff" stroke-width="4" />');
+    svg.innerHTML = parts.join("");
+    wheelBuilt = true;
+  }
+  function doLottery(){
+    if (lotteryBusy) return;
+    if (wallet.tickets <= 0){
+      playSound("fail");
+      showPanelNotice("lotteryNotice", "没有抽奖券，去商城买一张吧");
+      var noRes = $("lotteryResult");
+      if (noRes) noRes.textContent = "没有抽奖券，去商城买一张吧";
+      showToast("没有抽奖券", "error");
+      return;
+    }
+    hidePanelNotice("lotteryNotice");
+    buildWheel();
+    wallet.tickets--;
+    lotteryBusy = true;
+    var btn = $("lotteryBtn"), hub = $("wheelHub"), spinEl = $("wheelSpin");
+    if (btn) btn.disabled = true;
+    if (hub) hub.disabled = true;
+    var res = $("lotteryResult");
+    res.textContent = "转盘转动中…";
+    renderBag();
+    var prize = lotteryPick();
+    var prizeIdx = 0;
+    LOTTERY_PRIZES.forEach(function(pr, i){ if (pr.coins === prize.coins) prizeIdx = i; });
+    var seg = 360 / LOTTERY_PRIZES.length;
+    var mid = prizeIdx * seg + seg / 2;
+    var jitter = Math.random() * 20 - 10;
+    var target = 360 - mid + jitter;
+    var delta = 5 * 360 + ((target - (wheelRotation % 360) + 360) % 360);
+    wheelRotation += delta;
+    if (spinEl){
+      spinEl.style.transition = "transform 3.4s cubic-bezier(.12,.75,.12,1)";
+      spinEl.style.transform = "rotate(" + wheelRotation + "deg)";
+    }
+    setTimeout(function(){
+      wallet.coins += prize.coins;
+      lotteryBusy = false;
+      if (btn) btn.disabled = false;
+      if (hub) hub.disabled = false;
+      res.textContent = "恭喜获得 " + prize.coins + " 羊毛币！";
+      acquireLogItems.unshift({text: "抽奖：+" + prize.coins + " 羊毛币"});
+      acquireLogItems = acquireLogItems.slice(0, 6);
+      var log = $("lotteryLog");
+      if (log){
+        var li = document.createElement("li");
+        li.textContent = "抽中 " + prize.coins + " 羊毛币";
+        log.insertBefore(li, log.firstChild);
+        while (log.children.length > 5) log.removeChild(log.lastChild);
+      }
+      renderBag();
+      playSound("win");
+    }, 3450);
+  }
+  /* 子弹窗：点遮罩空白处不关闭，只能点「返回」或「×」关闭。 */
+  function openSub(name){
+    var ov = $("subOverlay");
+    if (!ov) return;
+    ov.classList.add("show");
+    ["checkin", "redeem", "lottery", "shop"].forEach(function(n){
+      var p = $("panel-" + n);
+      if (p) p.classList.toggle("hidden", n !== name);
+    });
+    if (name === "shop") renderShop();
+    if (name === "checkin") renderCheckin();
+    if (name === "lottery") renderLottery();
+    hidePanelNotice("shopNotice");
+    hidePanelNotice("lotteryNotice");
+  }
+  function closeSub(){
+    var ov = $("subOverlay");
+    if (ov) ov.classList.remove("show");
+  }
+
+  /* ================= 背包 / 签到 / 兑换 / 存档 ================= */
+  var CHECK_COIN_REWARDS = [20, 30, 40, 50, 60, 80, 120];
+  function propIconHTML(def){
+    if (def.img) return '<img src="' + def.img + '" alt="" />';
+    return PROP_ICON_SVG[def.icon] || "";
+  }
+  function renderBag(){
+    var grid = $("bagGrid");
+    if (grid){
+      grid.innerHTML = "";
+      PROP_DEFS.forEach(function(p){
+        var d = document.createElement("div");
+        d.className = "bag-item";
+        d.innerHTML = '<span class="bi">' + propIconHTML(p) + '</span><b>' + (bag[p.key]||0) + '</b><span>' + p.name + '</span><span class="src">商城购买</span>';
+        grid.appendChild(d);
+      });
+    }
+    var total = 0;
+    PROP_DEFS.forEach(function(p){ total += bag[p.key]||0; });
+    if ($("bagTotal")) $("bagTotal").textContent = total + " 件";
+    if ($("deviceCode")) $("deviceCode").textContent = DEVICE_CODE;
+    if ($("saveDeviceCode")) $("saveDeviceCode").textContent = DEVICE_CODE;
+    if ($("checkinState")) $("checkinState").textContent = checkin.last === todayStr() ? "今天已签到" : "今天还没签到";
+    if ($("checkinInfo")) $("checkinInfo").textContent = "连续签到 " + checkin.streak + " 天 · 累计 " + checkin.total + " 天";
+    var log = $("acquireLog");
+    if (log){
+      log.innerHTML = "";
+      acquireLogItems.forEach(function(it){
+        var li = document.createElement("li"); li.textContent = it.text; log.appendChild(li);
+      });
+    }
+    if ($("saveSummary")){
+      var cleared = Object.keys(clearedLevels).filter(function(k){ return clearedLevels[k]; }).length;
+      $("saveSummary").textContent = "羊毛币 " + wallet.coins + " · 抽奖券 " + wallet.tickets + " 张 · 背包 " + total + " 件 · 签到 " + checkin.total + " 天 · 通关 " + cleared + " 关 · 已解锁到第 " + unlockedMax + " 关 · 已兑换 " + Object.keys(redeemedCodes).length + " 张兑换码";
+    }
+    if ($("walletCoins")) $("walletCoins").textContent = wallet.coins;
+    if ($("walletCoinsMe")) $("walletCoinsMe").textContent = wallet.coins;
+    if ($("walletTicketsMe")) $("walletTicketsMe").textContent = wallet.tickets + " 张";
+    if ($("lotteryBalance")) $("lotteryBalance").textContent = "羊毛币 " + wallet.coins + " · 抽奖券 " + wallet.tickets + " 张";
+    if ($("shopBalance")) $("shopBalance").textContent = wallet.coins + " 羊毛币 · 抽奖券 " + wallet.tickets + " 张";
+    persist();
+  }
+  function renderCheckin(){
+    var strip = $("checkStrip");
+    if (!strip) return;
+    strip.innerHTML = "";
+    var completed = checkin.last === todayStr() ? ((checkin.streak - 1) % 7) + 1 : (checkin.streak % 7);
+    var nextIdx = (completed % 7) + 1;
+    for (var i = 0; i < 7; i++){
+      var d = document.createElement("div");
+      d.className = "check-day" + (i + 1 <= completed ? " done" : "") + (i + 1 === nextIdx && checkin.last !== todayStr() ? " today" : "");
+      d.innerHTML = "<b>第 " + (i + 1) + " 天</b>+" + CHECK_COIN_REWARDS[i] + " 羊毛币" + (i + 1 <= completed ? "<br />已领取" : "");
+      strip.appendChild(d);
+    }
+    var btn = $("checkinBtn");
+    if (btn){
+      btn.disabled = checkin.last === todayStr();
+      btn.textContent = checkin.last === todayStr() ? "今天已签到，明天再来" : "签到领 " + CHECK_COIN_REWARDS[nextIdx - 1] + " 羊毛币";
+    }
+  }
+  function doCheckin(){
+    if (checkin.last === todayStr()){ showToast("今天已经签到过啦"); return; }
+    var y = new Date(); y.setDate(y.getDate() - 1);
+    checkin.streak = (checkin.last === todayStr(y)) ? checkin.streak + 1 : 1;
+    checkin.last = todayStr();
+    checkin.total++;
+    var reward = CHECK_COIN_REWARDS[(checkin.streak - 1) % 7];
+    wallet.coins += reward;
+    acquireLogItems.unshift({text: "第 " + checkin.streak + " 天签到：+" + reward + " 羊毛币"});
+    acquireLogItems = acquireLogItems.slice(0, 6);
+    renderCheckin(); renderBag();
+    showToast("签到成功！+" + reward + " 羊毛币");
+    playSound("match");
+  }
+  /* ---------- 兑换码：只兑羊毛币和抽奖券 ---------- */
+  /* parseCode 在 CODE-CORE 区块，此处不再重复定义。 */
+  function doRedeem(){
+    var input = $("redeemInput");
+    var raw = input.value.trim();
+    if (!raw){ playSound("fail"); $("redeemMsg").classList.add("msg-error"); $("redeemMsg").textContent = "先输入兑换码。"; showToast("先输入兑换码", "error"); return; }
+    var parsed = parseCode(raw);
+    if (!parsed){
+      var looksOld = raw.toUpperCase().replace(/[\s　]+/g, "").indexOf("YY") === 0;
+      playSound("fail");
+      $("redeemMsg").classList.add("msg-error");
+      $("redeemMsg").textContent = looksOld ? "该兑换码已失效，请确认兑换码是否正确。" : "兑换码不正确，请检查后重新输入。";
+      showToast(looksOld ? "该兑换码已失效" : "兑换码不正确", "error");
+      return;
+    }
+    if (parsed.exp !== "99999999" && dateNum(new Date()) > parseInt(parsed.exp, 10)){
+      playSound("fail");
+      $("redeemMsg").classList.add("msg-error");
+      $("redeemMsg").textContent = "这张兑换码已过期（有效期至 " + parsed.exp.slice(0,4) + "-" + parsed.exp.slice(4,6) + "-" + parsed.exp.slice(6,8) + "）。";
+      showToast("兑换码已过期", "error");
+      return;
+    }
+    if (parsed.kind === "B"){
+      if (parsed.tag !== deviceSuffix(DEVICE_CODE)){
+        playSound("fail");
+        $("redeemMsg").classList.add("msg-error");
+        $("redeemMsg").textContent = "这张兑换码绑定了其他设备，本机无法兑换。";
+        showToast("兑换码绑定其他设备，无法兑换", "error");
+        return;
+      }
+      if (redeemedCodes[parsed.code]){
+        playSound("fail");
+        $("redeemMsg").classList.add("msg-error");
+        $("redeemMsg").textContent = "这张兑换码已经兑换过了。";
+        showToast("这张兑换码已经兑换过了", "error");
+        return;
+      }
+      redeemedCodes[parsed.code] = true;
+    } else {
+      var used = codeUses[parsed.code] || 0;
+      if (used >= parsed.uses){
+        playSound("fail");
+        $("redeemMsg").classList.add("msg-error");
+        $("redeemMsg").textContent = "这张兑换码的次数已经用完（" + used + "/" + parsed.uses + " 次）。";
+        showToast("兑换码次数已用完", "error");
+        return;
+      }
+      codeUses[parsed.code] = used + 1;
+    }
+    var parts = [];
+    if (parsed.reward.coins) parts.push("羊毛币×" + parsed.reward.coins);
+    if (parsed.reward.tickets) parts.push("抽奖券×" + parsed.reward.tickets);
+    wallet.coins += parsed.reward.coins;
+    wallet.tickets += parsed.reward.tickets;
+    acquireLogItems.unshift({text: "兑换码：" + parts.join("、")});
+    acquireLogItems = acquireLogItems.slice(0, 6);
+    renderBag();
+    var log = $("redeemLog");
+    if (log){
+      var li = document.createElement("li");
+      li.textContent = parsed.code + " → " + parts.join("、") + (parsed.kind === "U" ? "（第 " + codeUses[parsed.code] + "/" + parsed.uses + " 次）" : "");
+      log.insertBefore(li, log.firstChild);
+      while (log.children.length > 5) log.removeChild(log.lastChild);
+    }
+    $("redeemMsg").classList.remove("msg-error");
+    $("redeemMsg").textContent = "兑换成功：" + parts.join("、") + "，已放入钱包。";
+    showToast("兑换成功：" + parts.join("、"));
+    playSound("win");
+    input.value = "";
+  }
+  function downloadText(name, text){
+    var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  }
+  /* ---------- 健壮复制 ---------- */
+  /* 优先 Clipboard API，失败走 textarea + execCommand 兜底（iOS Safari /
+     应用内 WebView 经常拒 Clipboard API，兜底是主路径之一），再走
+     选中元素文本 + execCommand。返回 Promise<boolean>，调用方按结果
+     给成功 / 失败反馈，绝不能点了没反应。 */
+  function fallbackCopyTextarea(text){
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed"; ta.style.top = "0"; ta.style.left = "0";
+    ta.style.width = "2em"; ta.style.height = "2em"; ta.style.padding = "0";
+    ta.style.border = "none"; ta.style.outline = "none"; ta.style.boxShadow = "none";
+    ta.style.background = "transparent"; ta.style.fontSize = "16px"; ta.style.opacity = "0.01";
+    document.body.appendChild(ta);
+    var ok = false;
+    try{
+      ta.focus();
+      ta.select();
+      try{ ta.setSelectionRange(0, ta.value.length); }catch(e){}
+      ok = document.execCommand("copy");
+    }catch(e){ ok = false; }
+    ta.remove();
+    return !!ok;
+  }
+  function fallbackCopySelection(el){
+    if (!el) return false;
+    try{
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      var ok = document.execCommand("copy");
+      sel.removeAllRanges();
+      return !!ok;
+    }catch(e){ return false; }
+  }
+  function copyTextRobust(text, elForSelection){
+    return new Promise(function(resolve){
+      function done(ok){
+        if (ok) resolve(true);
+        else if (elForSelection && fallbackCopySelection(elForSelection)) resolve(true);
+        else resolve(false);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){ done(true); }, function(){ done(fallbackCopyTextarea(text)); });
+      } else {
+        done(fallbackCopyTextarea(text));
+      }
+    });
+  }
+  function copyText(text){
+    return copyTextRobust(text, null);
+  }
+  function fallbackCopy(text){
+    fallbackCopyTextarea(text);
+  }
+  function selectTextOf(el){
+    if (!el) return;
+    try{
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }catch(e){}
+  }
+  function copyDeviceCode(){
+    var text = DEVICE_CODE;
+    copyTextRobust(text, $("deviceCode")).then(function(ok){
+      if (ok){
+        showToast("设备码已复制");
+      } else {
+        /* 全部自动路径都被拦截：选中设备码文本，长按菜单手动复制。 */
+        selectTextOf($("deviceCode"));
+        showToast("已选中，长按菜单复制");
+      }
+    });
+  }
+  /* ---------- 存档 ---------- */
+  function buildSavePayload(){
+    return {
+      v: 1, device: DEVICE_CODE, savedAt: new Date().toISOString(),
+      bag: bag, checkin: checkin, clearedLevels: clearedLevels,
+      wallet: wallet, unlockedMax: unlockedMax,
+      redeemedCodes: redeemedCodes, codeUses: codeUses,
+      acquireLog: acquireLogItems.slice(0, 6)
+    };
+  }
+  function encodeSaveJSON(){
+    var payload = buildSavePayload();
+    var sum = hash6(payload.device + "|" + JSON.stringify(payload));
+    return JSON.stringify({payload: payload, sum: sum}, null, 2);
+  }
+  function encodeSave(){
+    var payload = buildSavePayload();
+    var sum = hash6(payload.device + "|" + JSON.stringify(payload));
+    var full = {payload: payload, sum: sum};
+    var json = JSON.stringify(full);
+    var b64;
+    try { b64 = btoa(unescape(encodeURIComponent(json))); }
+    catch (e) { b64 = btoa(json); }
+    return "YYSAVE1." + b64;
+  }
+  function decodeSave(str){
+    var s = String(str || "").trim();
+    if (s.charAt(0) === "{"){
+      var obj0;
+      try { obj0 = JSON.parse(s); } catch (e) { return {error: "存档 JSON 解析失败。"}; }
+      if (!obj0 || !obj0.payload || typeof obj0.sum !== "string") return {error: "存档格式不对。"};
+      var expect0 = hash6(obj0.payload.device + "|" + JSON.stringify(obj0.payload));
+      if (expect0 !== obj0.sum) return {error: "存档校验没通过：内容可能被改过，请用原文件重新导出。"};
+      if (obj0.payload.device !== DEVICE_CODE) return {error: "存档绑定了另一台设备（" + obj0.payload.device + "），本机是 " + DEVICE_CODE + "，为防止乱分享无法导入。"};
+      return {payload: obj0.payload};
+    }
+    if (s.indexOf("YYSAVE1.") !== 0) return {error: "不是本页面的存档（应为存档 JSON 文件，或以 YYSAVE1. 开头的存档字符串）。"};
+    var b64 = s.slice("YYSAVE1.".length).replace(/\s+/g, "");
+    var json;
+    try { json = decodeURIComponent(escape(atob(b64))); }
+    catch (e) {
+      try { json = atob(b64); } catch (e2) { return {error: "存档字符串解码失败，可能被截断或改过。"}; }
+    }
+    var obj;
+    try { obj = JSON.parse(json); } catch (e) { return {error: "存档内容解析失败。"}; }
+    if (!obj || !obj.payload || typeof obj.sum !== "string") return {error: "存档格式不对。"};
+    var expect = hash6(obj.payload.device + "|" + JSON.stringify(obj.payload));
+    if (expect !== obj.sum) return {error: "存档校验没通过：内容可能被改过，请用原文件重新导出。"};
+    if (obj.payload.device !== DEVICE_CODE) return {error: "存档绑定了另一台设备（" + obj.payload.device + "），本机是 " + DEVICE_CODE + "，为防止乱分享无法导入。"};
+    return {payload: obj.payload};
+  }
+  function applySave(payload){
+    if (payload.bag){ PROP_DEFS.forEach(function(p){ bag[p.key] = Math.max(0, Math.min(99, parseInt(payload.bag[p.key], 10) || 0)); }); }
+    if (payload.checkin) checkin = {last: payload.checkin.last || "", streak: payload.checkin.streak || 0, total: payload.checkin.total || 0};
+    if (payload.clearedLevels) clearedLevels = payload.clearedLevels;
+    if (payload.wallet) wallet = {coins: Math.max(0, parseInt(payload.wallet.coins, 10) || 0), tickets: Math.max(0, parseInt(payload.wallet.tickets, 10) || 0)};
+    if (payload.unlockedMax) unlockedMax = Math.max(1, parseInt(payload.unlockedMax, 10) || 1);
+    else if (payload.clearedLevels){ var mc = 0; Object.keys(payload.clearedLevels).forEach(function(k){ if (payload.clearedLevels[k]) mc = Math.max(mc, parseInt(k, 10) || 0); }); unlockedMax = Math.max(1, mc + 1); }
+    clampBag();
+    if (payload.redeemedCodes) redeemedCodes = payload.redeemedCodes;
+    if (payload.codeUses) codeUses = payload.codeUses;
+    if (payload.acquireLog && payload.acquireLog.length) acquireLogItems = payload.acquireLog;
+    renderCheckin(); renderBag(); updateHUD();
+    var d = new Date(payload.savedAt);
+    $("saveInfo").textContent = isNaN(d.getTime()) ? "存档时间未知" : d.toLocaleString();
+    $("saveMsg").textContent = "导入成功：存档时间 " + $("saveInfo").textContent + "。";
+  }
+  function doImportText(){
+    var res = decodeSave($("saveText").value);
+    if (res.error){ $("saveMsg").textContent = res.error; showToast("导入失败：存档不匹配本机"); return; }
+    applySave(res.payload);
+    showToast("存档导入成功");
+  }
+  /* ---------- 接线 ---------- */
+  $("checkinBtn").addEventListener("click", doCheckin);
+  $("redeemBtn").addEventListener("click", doRedeem);
+  $("redeemInput").addEventListener("keydown", function(e){ if (e.key === "Enter") doRedeem(); });
+  $("saveDownload").addEventListener("click", function(){
+    downloadText("yang-save-" + DEVICE_CODE + ".json", encodeSaveJSON());
+    $("saveInfo").textContent = new Date().toLocaleString();
+    $("saveMsg").textContent = "存档已下载，请妥善保管。";
+    showToast("存档已下载");
+  });
+  $("saveCopy").addEventListener("click", function(){
+    var str = encodeSave();
+    $("saveText").value = str;
+    $("saveInfo").textContent = new Date().toLocaleString();
+    copyTextRobust(str, null).then(function(ok){
+      if (ok){
+        $("saveMsg").textContent = "存档字符串已复制，也可以从下方文本框里再复制一次。";
+        showToast("存档字符串已复制");
+      } else {
+        $("saveMsg").textContent = "已填入下方文本框，长按复制。";
+        showToast("请长按文本框手动复制");
+        try{ $("saveText").focus(); $("saveText").select(); }catch(e){}
+      }
+    });
+  });
+  $("saveImport").addEventListener("click", doImportText);
+  $("saveFile").addEventListener("change", function(){
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){ $("saveText").value = String(reader.result || ""); doImportText(); };
+    reader.readAsText(f);
+    this.value = "";
+  });
+  /* 设备码点击复制：我的页面芯片 + 存档区设备码都可点，键盘也可操作 */
+  (function wireDeviceCopy(){
+    var chip = $("deviceChip");
+    if (chip){
+      chip.addEventListener("click", copyDeviceCode);
+      chip.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " "){ e.preventDefault(); copyDeviceCode(); }
+      });
+    }
+    var saveCodeEl = $("saveDeviceCode");
+    if (saveCodeEl){
+      saveCodeEl.addEventListener("click", function(e){ e.stopPropagation(); copyDeviceCode(); });
+      saveCodeEl.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " "){ e.preventDefault(); copyDeviceCode(); }
+      });
+    }
+  })();
+  /* 初始化：先恢复本机自动保存，再进游戏；已通关过的直接从已解锁的最高关卡开始 */
+  loadProgress();
+  (function initMyPage(){
+    renderCheckin();
+    renderBag();
+    buildWheel();
+  })();
+
+  clampBag();
+  startGame(Math.max(1, unlockedMax));
+})();
+</script>
+</body>
+</html>
+
